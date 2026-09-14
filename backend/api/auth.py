@@ -3,10 +3,12 @@ from fastapi. security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
 
-from schemas.user import UserCreateRequest, UserCreateResponse
-from core.dependencies import get_db
+from schemas.user import UserCreateRequest, UserCreateResponse, UserMeResponse
+from core.dependencies import get_db, get_current_user
 from core.security import hash_password, verify_password, create_access_token, credentials_exception
 from repositories.user import create_user, get_one_user
+from utils.validator import check_email
+from models.user import User
 
 router = APIRouter(
     prefix='/auth',
@@ -18,14 +20,25 @@ async def register(
     user_data: UserCreateRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    if await get_one_user(db, username=user_data.username):
+    is_valid_email, normalised_email = check_email(user_data.email)
+    if not is_valid_email:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Existing Username"
-        )
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid Email: {normalised_email}"
+                )
 
+    if await get_one_user(db, email=normalised_email):
+        raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Existing Email"
+                )
     try:
-        new_user = await create_user(db, user_data.username, hash_password(user_data.password))
+        new_user = await create_user(
+            db=db, 
+            username=user_data.username, 
+            email=normalised_email, 
+            hashed_pwd=hash_password(user_data.password)
+        )
         return new_user
     except Exception as e:
         raise HTTPException(
@@ -38,14 +51,21 @@ async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: AsyncSession = Depends(get_db)
 ):
-    user = await get_one_user(db, username=form_data.username)
+    # Login via email
+    user = await get_one_user(db, email=form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_pwd):
         raise credentials_exception
 
     return {
         "access_token": create_access_token(
-            username=user.username,
+            user_id=user.id,
             role="user"
         ),
         "token_type": "bearer"
     }
+
+@router.get('/me', status_code=status.HTTP_200_OK, response_model=UserMeResponse)
+async def me(
+    current_user: User = Depends(get_current_user)
+):
+    return current_user

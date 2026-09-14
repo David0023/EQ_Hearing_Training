@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16
-    container_name: pronunciation_checker_db
+    container_name: eq_hearing_training_db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password

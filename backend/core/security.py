@@ -20,31 +20,37 @@ class TokenData(BaseModel):
     role: str
 
 def create_access_token(
-    username: str,
+    user_id: int,
     role: str
 ) -> str:
     exp = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     iat = datetime.now(timezone.utc)
     to_encode = {
-        "sub": username,
+        "sub": str(user_id),
         "role": role,
         "exp": int(exp.timestamp()),
         "iat": int(iat.timestamp())
     }
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
+
 def decode_token(token: str) -> TokenData:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        return TokenData(**payload)
+        return TokenData(
+            sub=str(payload["sub"]),
+            exp=int(payload["exp"]),
+            iat=int(payload["iat"]),
+            role=payload["role"],
+        )
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
-            headers={"WWW-Authenticate": "Bearer"}
+            headers={"WWW-Authenticate": "Bearer"},
         )
     except jwt.PyJWTError:
-            raise credentials_exception
+        raise credentials_exception
     except ValidationError:
         raise credentials_exception
 

@@ -1,13 +1,20 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
-class UserCreateRequest(BaseModel):
+class UserBaseModel(BaseModel):
     username: str
+    email: str
+
+class UserCreateRequest(UserBaseModel):
     password: str
 
-class UserCreateResponse(BaseModel):
+class UserCreateResponse(UserBaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: int
-    username: str
     created_at: datetime
     updated_at: datetime
+
+class UserMeResponse(UserBaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    created_at: datetime
+    updated_at: datetime
+    

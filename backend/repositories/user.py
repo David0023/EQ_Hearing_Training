@@ -8,9 +8,10 @@ async def get_one_user(db: AsyncSession, **kwargs) -> User | None:
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
-
-async def create_user(db: AsyncSession, username: str, hashed_pwd: str) -> User:
+# Assuming all inputs are valid.
+async def create_user(db: AsyncSession, email: str, username: str, hashed_pwd: str) -> User:
     new_user = User(
+        email=email,
         username=username,
         hashed_pwd=hashed_pwd
     )
