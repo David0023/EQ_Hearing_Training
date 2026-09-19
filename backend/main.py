@@ -4,6 +4,7 @@ from core.database import init_db
 import uvicorn
 
 from api.auth import router as auth_router
+from api.v1.router import router as v1_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,6 +17,7 @@ def read_root():
     return {"Hello": "World"}
 
 app.include_router(auth_router)
+app.include_router(v1_router)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import DateTime, func, ForeignKey
+from sqlalchemy import DateTime, func, ForeignKey, CheckConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from models.base import Base
@@ -21,13 +21,14 @@ class TrainingSession(Base):
     
 
     started_at: Mapped[datetime] = mapped_column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            nullable=False
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
     )
 
-    completed_at: Mapped[datetime] = mapped_column(
-                DateTime(timezone=True),
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
 
     user: Mapped["User"] = relationship(back_populates="training_sessions")
@@ -35,4 +36,13 @@ class TrainingSession(Base):
     training_attempts: Mapped[list["TrainingAttempt"]] = relationship(
         back_populates="training_session",
         cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "gain_level > 0", name="check_gain_positive"
+        ),
+        CheckConstraint(
+            "min_frequency <= max_frequency", name="check_min_lesser_or_equal_than_max"
+        )
     )
