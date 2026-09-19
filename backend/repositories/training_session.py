@@ -10,12 +10,12 @@ async def get_one_training_session(db: AsyncSession, **kwargs) -> TrainingSessio
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
-async def get_one_training_session_with_attempts(
+async def get_one_training_session_with_questions(
         db: AsyncSession, **kwargs
 ) -> TrainingSession | None:
     query = (
         select(TrainingSession)
-        .options(selectinload(TrainingSession.training_attempts))
+        .options(selectinload(TrainingSession.training_questions))
         .filter_by(**kwargs)
     )
     result = await db.execute(query)

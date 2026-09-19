@@ -1,20 +1,20 @@
 from pydantic import BaseModel, ConfigDict
 from models.enums import QuestionType
 
-class TrainingAttemptBase(BaseModel):
+class TrainingQuestionBase(BaseModel):
     pass
 
-class ViewTrainingAttmpt(BaseModel):
+class ViewTrainingQuestion(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     target_frequency: float
     target_gain: float
     is_answered: bool
 
-class GetTrainingAttmptResponse(BaseModel):
-    attempt: ViewTrainingAttmpt
+class GetTrainingQuestionResponse(BaseModel):
+    question: ViewTrainingQuestion
     question_type: QuestionType
 
-class GetAllTrainingAttempts(TrainingAttemptBase):
+class GetAllTrainingQuestions(TrainingQuestionBase):
     model_config = ConfigDict(from_attributes=True)
     id: int

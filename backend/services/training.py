@@ -1,15 +1,15 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.enums import QuestionType
-from models.training_attempt import TrainingAttempt
+from models.training_question import TrainingQuestion
 from models.training_session import TrainingSession
 from repositories.training_session import (
     create_training_session as _create_training_session,
     get_one_training_session
 )
-from repositories.training_attempt import create_training_attempt
+from repositories.training_question import create_training_question
 
-from backend.domain.training.info import validate_frequency, validate_gain, get_frequency_range
+from domain.training.info import validate_frequency, validate_gain, get_frequency_range
 from domain.training.rules import TrainingRule
 from domain.training.generator import generate_question
 
@@ -44,7 +44,7 @@ async def create_training_session(
 async def create_training_question(
     db: AsyncSession,
     t_session: TrainingSession
-) -> TrainingAttempt:
+) -> TrainingQuestion:
     t_rule = TrainingRule(
         frequencies=get_frequency_range(t_session.min_frequency, t_session.max_frequency),
         gain_level=t_session.gain_level,
@@ -52,9 +52,9 @@ async def create_training_question(
     )
     question = generate_question(t_rule)
 
-    t_attempt = TrainingAttempt(
+    training_question = TrainingQuestion(
         training_session_id=t_session.id,
         target_frequency=question.frequency,
         target_gain=question.gain
     )
-    return await create_training_attempt(db, t_attempt)
+    return await create_training_question(db, training_question)

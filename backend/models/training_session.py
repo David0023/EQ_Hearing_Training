@@ -33,7 +33,7 @@ class TrainingSession(Base):
 
     user: Mapped["User"] = relationship(back_populates="training_sessions")
 
-    training_attempts: Mapped[list["TrainingAttempt"]] = relationship(
+    training_questions: Mapped[list["TrainingQuestion"]] = relationship(
         back_populates="training_session",
         cascade="all, delete-orphan"
     )

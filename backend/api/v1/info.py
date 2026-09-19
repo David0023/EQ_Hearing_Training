@@ -1,11 +1,11 @@
 from fastapi import APIRouter, status
 
-from backend.schemas.info import (
+from schemas.info import (
     FrequencyGroupResponse,
     FrequencyGroupItem,
     GainOptionResponse
 )
-from backend.domain.training.info import FREQUENCY_GROUPS, STANDARD_GAIN_OPTIONS
+from domain.training.info import FREQUENCY_GROUPS, STANDARD_GAIN_OPTIONS
 
 
 router = APIRouter(
