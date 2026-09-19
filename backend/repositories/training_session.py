@@ -1,5 +1,6 @@
 from typing import List
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.training_session import TrainingSession
 from models.enums import QuestionType
@@ -9,7 +10,19 @@ async def get_one_training_session(db: AsyncSession, **kwargs) -> TrainingSessio
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
-async def get_training_sessions(db: AsyncSession, **kwargs) -> list[TrainingSession] | None:
+async def get_one_training_session_with_attempts(
+        db: AsyncSession, **kwargs
+) -> TrainingSession | None:
+    query = (
+        select(TrainingSession)
+        .options(selectinload(TrainingSession.training_attempts))
+        .filter_by(**kwargs)
+    )
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def get_training_sessions(db: AsyncSession, **kwargs) -> list[TrainingSession]:
     query = select(TrainingSession).filter_by(**kwargs)
     result = await db.execute(query)
     return result.scalars().all()

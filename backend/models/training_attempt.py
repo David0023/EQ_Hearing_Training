@@ -10,14 +10,14 @@ class TrainingAttempt(Base):
     target_frequency: Mapped[float] = mapped_column(nullable=False)
     target_gain: Mapped[float] = mapped_column(nullable=False)
     
-    user_frequency: Mapped[float] = mapped_column(nullable=False)
-    user_gain: Mapped[float] = mapped_column(nullable=False)
-    response_time_ms: Mapped[float] = mapped_column(nullable=False)
+    user_frequency: Mapped[float] = mapped_column(nullable=True)
+    user_gain: Mapped[float] = mapped_column(nullable=True)
+    response_time_ms: Mapped[float] = mapped_column(nullable=True)
 
-    answered_at: Mapped[datetime] = mapped_column(
+    is_answered: Mapped[bool] = mapped_column(nullable=False, default=False)
+    answered_at: Mapped[datetime | None] = mapped_column(
                 DateTime(timezone=True),
-                server_default=func.now(),
-                nullable=False
+                nullable=True
     )
 
     training_session_id: Mapped[int] = mapped_column(ForeignKey("training_sessions.id"))

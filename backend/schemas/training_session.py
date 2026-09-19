@@ -1,7 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from models.enums import QuestionType
-from schemas.user import UserMeResponse
 from schemas.training_attempt import GetAllTrainingAttempts
 
 class TrainingSessionBase(BaseModel):
@@ -23,7 +22,12 @@ class TrainingSessionCreateResponse(TrainingSessionBase):
 class GetTrainingSessionResponse(TrainingSessionBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    user_id: int
     started_at: datetime
     completed_at: datetime | None
-    user: UserMeResponse
+
+class GetTrainingSessionWithAttemptsResponse(GetTrainingSessionResponse):
     training_attempts: list[GetAllTrainingAttempts]
+
+class GetAllTrainingSessionsResponse(BaseModel):
+    sessions: list[GetTrainingSessionResponse]

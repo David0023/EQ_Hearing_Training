@@ -5,7 +5,7 @@ from models.enums import QuestionType
 
 @dataclass
 class TrainingRule:
-    frequencies = list[float]
+    frequencies: list[float]
     gain_level: float
     question_type: QuestionType
 

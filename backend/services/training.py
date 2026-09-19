@@ -1,16 +1,23 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.enums import QuestionType
+from models.training_attempt import TrainingAttempt
 from models.training_session import TrainingSession
-from repositories.training_session import create_training_session as _create_training_session
+from repositories.training_session import (
+    create_training_session as _create_training_session,
+    get_one_training_session
+)
+from repositories.training_attempt import create_training_attempt
 
 from domain.training.frequencies import validate_frequency, get_frequency_range
 from domain.training.rules import TrainingRule
-from domain.training.difficulty import calculate_difficulty
 from domain.training.generator import generate_question
 
 
 class SessionCreationException(Exception):
+    pass
+
+class QuestionCreationException(Exception):
     pass
 
 async def create_training_session(
@@ -33,3 +40,25 @@ async def create_training_session(
         gain_level=gain_level
     )
     return await _create_training_session(db, new_training_session)
+
+async def create_training_question(
+    db: AsyncSession,
+    training_session_id: int
+) -> TrainingAttempt:
+    t_session = await get_one_training_session(db, id=training_session_id)
+    if not t_session:
+        raise QuestionCreationException("Training Session Not Found")
+
+    t_rule = TrainingRule(
+        frequencies=get_frequency_range(t_session.min_frequency, t_session.max_frequency),
+        gain_level=t_session.gain_level,
+        question_type=t_session.question_type
+    )
+    question = generate_question(t_rule)
+
+    t_attempt = TrainingAttempt(
+        training_session_id=training_session_id,
+        target_frequency=question.frequency,
+        target_gain=question.gain
+    )
+    return await create_training_attempt(db, t_attempt)
