@@ -6,10 +6,7 @@ from typing import Annotated
 from schemas.user import UserCreateRequest, UserCreateResponse, UserMeResponse
 from core.dependencies import get_db, get_current_user
 from core.security import hash_password, verify_password, create_access_token, credentials_exception
-from repositories.user import (
-    create as create_user, 
-    get_one as get_one_user
-)
+from repositories import user
 from utils.validator import check_email
 from models.user import User
 
@@ -30,13 +27,13 @@ async def register(
                     detail=f"Invalid Email: {normalised_email}"
                 )
 
-    if await get_one_user(db, User.email==normalised_email):
+    if await user.get_one(db, User.email==normalised_email):
         raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Existing Email"
                 )
     try:
-        new_user = await create_user(
+        new_user = await user.create(
             db=db, 
             username=user_data.username, 
             email=normalised_email, 
@@ -55,8 +52,8 @@ async def login(
     db: AsyncSession = Depends(get_db)
 ):
     # Login via email
-    user = await get_one_user(db, User.email==form_data.username)
-    if not user or not verify_password(form_data.password, user.hashed_pwd):
+    existing_user = await user.get_one(db, User.email==form_data.username)
+    if not existing_user or not verify_password(form_data.password, existing_user.hashed_pwd):
         raise credentials_exception
 
     return {
