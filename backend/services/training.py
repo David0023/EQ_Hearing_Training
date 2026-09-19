@@ -7,7 +7,7 @@ from repositories.training_session import (
     create_training_session as _create_training_session,
     get_one_training_session
 )
-from repositories.training_question import create_training_question
+from repositories.training_question import create_training_question as _create_training_question
 
 from domain.training.info import validate_frequency, validate_gain, get_frequency_range
 from domain.training.rules import TrainingRule
@@ -57,4 +57,4 @@ async def create_training_question(
         target_frequency=question.frequency,
         target_gain=question.gain
     )
-    return await create_training_question(db, training_question)
+    return await _create_training_question(db, training_question)
