@@ -1,15 +1,17 @@
-from typing import List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.user import User
 
-async def get_one_user(db: AsyncSession, **kwargs) -> User | None:
-    query = select(User).filter_by(**kwargs)
+class UserCreationException(Exception):
+    pass
+
+async def get_one(db: AsyncSession, *conditions) -> User | None:
+    query = select(User).where(*conditions).order_by(User.id.asc())
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
 # Assuming all inputs are valid.
-async def create_user(db: AsyncSession, email: str, username: str, hashed_pwd: str) -> User:
+async def create(db: AsyncSession, email: str, username: str, hashed_pwd: str) -> User:
     new_user = User(
         email=email,
         username=username,
@@ -22,4 +24,4 @@ async def create_user(db: AsyncSession, email: str, username: str, hashed_pwd: s
         return new_user
     except Exception as e:
         db.session.rollback()
-        raise Exception(e)
+        raise UserCreationException(e)
