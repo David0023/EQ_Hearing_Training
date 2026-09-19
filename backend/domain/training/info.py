@@ -21,8 +21,24 @@ FREQUENCY_GROUPS: dict[str, tuple[float, float]] = {
     "air": (16000,16000),
 }
 
+STANDARD_GAIN_OPTIONS: tuple[float] = (
+    1.5,
+    3.0,
+    4.5,
+    6.0,
+    7.5,
+    9.0,
+    10.5,
+    13.0,
+    14.5,
+    15.0
+)
+
 def validate_frequency(frequency: float) -> bool:
     return frequency in STANDARD_FREQUENCIES
+
+def validate_gain(gain: float) -> bool:
+    return gain in STANDARD_GAIN_OPTIONS
 
 def get_frequency_range(min_frequency: float, max_frequency: float) -> list[float]:
     return [i for i in STANDARD_FREQUENCIES if min_frequency <= i <= max_frequency]

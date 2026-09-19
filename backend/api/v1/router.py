@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from api.v1.training import router as training_router
-from api.v1.frequency import router as frequency_router
+from backend.api.v1.info import router as frequency_router
 
 router = APIRouter(
     prefix='/api/vi',

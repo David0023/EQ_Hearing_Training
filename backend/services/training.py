@@ -9,7 +9,7 @@ from repositories.training_session import (
 )
 from repositories.training_attempt import create_training_attempt
 
-from domain.training.frequencies import validate_frequency, get_frequency_range
+from backend.domain.training.info import validate_frequency, validate_gain, get_frequency_range
 from domain.training.rules import TrainingRule
 from domain.training.generator import generate_question
 
@@ -43,12 +43,8 @@ async def create_training_session(
 
 async def create_training_question(
     db: AsyncSession,
-    training_session_id: int
+    t_session: TrainingSession
 ) -> TrainingAttempt:
-    t_session = await get_one_training_session(db, id=training_session_id)
-    if not t_session:
-        raise QuestionCreationException("Training Session Not Found")
-
     t_rule = TrainingRule(
         frequencies=get_frequency_range(t_session.min_frequency, t_session.max_frequency),
         gain_level=t_session.gain_level,
@@ -57,7 +53,7 @@ async def create_training_question(
     question = generate_question(t_rule)
 
     t_attempt = TrainingAttempt(
-        training_session_id=training_session_id,
+        training_session_id=t_session.id,
         target_frequency=question.frequency,
         target_gain=question.gain
     )

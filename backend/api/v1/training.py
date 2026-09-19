@@ -109,7 +109,7 @@ async def get_question_or_create(
         )
 
     return GetTrainingAttmptResponse(
-        attempt= await create_training_question(db, t_session.id),
+        attempt= await create_training_question(db, t_session),
         question_type=t_session.question_type
     )
     
