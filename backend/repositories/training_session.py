@@ -1,9 +1,7 @@
-from typing import List
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.training_session import TrainingSession
-from models.enums import QuestionType
 
 async def get_one_training_session(db: AsyncSession, **kwargs) -> TrainingSession | None:
     query = select(TrainingSession).filter_by(**kwargs)

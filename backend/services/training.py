@@ -30,8 +30,8 @@ async def create_training_session(
 ) -> TrainingSession:
     if not (validate_frequency(min_frequency) and validate_frequency(max_frequency)):
         raise SessionCreationException("Invalid Frequency Option")
-    if gain_level <= 0:
-        raise SessionCreationException("Gain Level must be positive")
+    if not validate_gain(gain_level):
+        raise SessionCreationException("Invalid Gain Level")
     new_training_session = TrainingSession(
         user_id=user_id,
         question_type=question_type,
