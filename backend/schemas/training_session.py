@@ -22,7 +22,6 @@ class TrainingSessionCreateResponse(TrainingSessionBase):
 class GetTrainingSessionResponse(TrainingSessionBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    user_id: int
     started_at: datetime
     completed_at: datetime | None
 

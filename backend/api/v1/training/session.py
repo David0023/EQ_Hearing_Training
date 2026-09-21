@@ -19,25 +19,6 @@ router = APIRouter(
 )
     
 ##---------------------------------------
-@router.get('/{session_id}', 
-    status_code=status.HTTP_200_OK,
-    response_model=GetTrainingSessionWithQuestionsResponse
-)
-async def get_single_session(
-    session_id: int, 
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user)
-):
-    session = await training_session.get_one_with_questions(db, id=session_id)
-
-    if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Non-existing training session")
-
-    if session.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not accessible")
-
-    return session
-
 @router.get('/all', 
     status_code=status.HTTP_200_OK,
     response_model=GetAllTrainingSessionsResponse
@@ -70,3 +51,22 @@ async def create_session(
         return session
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+@router.get('/{session_id}', 
+    status_code=status.HTTP_200_OK,
+    response_model=GetTrainingSessionWithQuestionsResponse
+)
+async def get_single_session(
+    session_id: int, 
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    session = await training_session.get_one_with_questions(db, id=session_id)
+
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Non-existing training session")
+
+    if session.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not accessible")
+
+    return session
