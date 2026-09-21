@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.training_question import TrainingQuestion
 
@@ -49,6 +49,37 @@ async def update(
         await db.commit()
         await db.refresh(training_question)
         return training_question
+    except Exception as e:
+        await db.rollback()
+        raise e
+
+async def delete_one(
+    db: AsyncSession,
+    *conditions
+) -> int:
+    query = select(TrainingQuestion).where(*conditions).order_by(TrainingQuestion.id.asc())
+    result = await db.execute(query)
+    training_question = result.scalars().first()
+    if training_question is None:
+        return 0
+
+    try:
+        await db.delete(training_question)
+        await db.commit()
+        return 1
+    except Exception as e:
+        await db.rollback()
+        raise e
+
+async def delete_many(
+    db: AsyncSession,
+    *conditions
+) -> int:
+    query = delete(TrainingQuestion).where(*conditions)
+    try:
+        result = await db.execute(query)
+        await db.commit()
+        return result.rowcount or 0
     except Exception as e:
         await db.rollback()
         raise e
