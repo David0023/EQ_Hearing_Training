@@ -23,6 +23,7 @@ def create_access_token(
     user_id: int,
     role: str
 ) -> str:
+    """Create a signed access token for a user and role."""
     exp = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     iat = datetime.now(timezone.utc)
     to_encode = {
@@ -35,6 +36,11 @@ def create_access_token(
 
 
 def decode_token(token: str) -> TokenData:
+    """Decode a token and return its validated token data.
+
+    Raises:
+        HTTPException: If the token is expired or cannot be validated.
+    """
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return TokenData(
@@ -60,7 +66,9 @@ def decode_token(token: str) -> TokenData:
 password_hash = PasswordHash.recommended()
 
 def hash_password(password: str) -> str:
+    """Hash a plain-text password."""
     return password_hash.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Check whether a plain-text password matches a stored hash."""
     return password_hash.verify(plain_password, hashed_password)

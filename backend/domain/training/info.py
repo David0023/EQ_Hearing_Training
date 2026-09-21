@@ -35,15 +35,19 @@ STANDARD_GAIN_OPTIONS: tuple[float] = (
 )
 
 def validate_frequency(frequency: float) -> bool:
+    """Return whether a frequency is one of the standard frequencies."""
     return frequency in STANDARD_FREQUENCIES
 
 def validate_gain(gain: float) -> bool:
+    """Return whether a gain is one of the standard gain options."""
     return gain in STANDARD_GAIN_OPTIONS
 
 def get_frequency_range(min_frequency: float, max_frequency: float) -> list[float]:
+    """Return standard frequencies within the inclusive frequency range."""
     return [i for i in STANDARD_FREQUENCIES if min_frequency <= i <= max_frequency]
 
 def get_frequency_range_by_name(min_group: str, max_group: str) -> list[float]:
+    """Return standard frequencies spanning two named frequency groups."""
     min_range = FREQUENCY_GROUPS.get(min_group)
     max_range = FREQUENCY_GROUPS.get(max_group)
 

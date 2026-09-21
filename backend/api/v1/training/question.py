@@ -24,6 +24,11 @@ async def start_question_or_continue(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
+    """Return the next unanswered question or create a new one.
+
+    Raises:
+        HTTPException: If the session does not exist or is not accessible.
+    """
     session = await training_session.get_one_with_questions(db, id=session_id)
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Non-existing training session")
@@ -58,6 +63,11 @@ async def answer_question(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
+    """Record an answer for a question in an accessible training session.
+
+    Raises:
+        HTTPException: If the session or question is invalid, inaccessible, or completed.
+    """
     session = await training_session.get_one_with_questions(db, id=session_id)
     if not session:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Non-existing training session")

@@ -20,6 +20,11 @@ async def register(
     user_data: UserCreateRequest,
     db: AsyncSession = Depends(get_db)
 ):
+    """Register a user and return the created user.
+
+    Raises:
+        HTTPException: If the email is invalid, already exists, or creation fails.
+    """
     is_valid_email, normalised_email = check_email(user_data.email)
     if not is_valid_email:
         raise HTTPException(
@@ -51,6 +56,11 @@ async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: AsyncSession = Depends(get_db)
 ):
+    """Authenticate a user and return a bearer access token.
+
+    Raises:
+        HTTPException: If the email or password is invalid.
+    """
     # Login via email
     existing_user = await user.get_one(db, User.email==form_data.username)
     if not existing_user or not verify_password(form_data.password, existing_user.hashed_pwd):
@@ -68,4 +78,5 @@ async def login(
 async def me(
     current_user: User = Depends(get_current_user)
 ):
+    """Return the authenticated user."""
     return current_user

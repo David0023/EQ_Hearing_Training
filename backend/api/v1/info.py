@@ -7,7 +7,6 @@ from schemas.info import (
 )
 from domain.training.info import FREQUENCY_GROUPS, STANDARD_GAIN_OPTIONS
 
-
 router = APIRouter(
     prefix='/info',
     tags=['info']
@@ -19,6 +18,7 @@ router = APIRouter(
     status_code=status.HTTP_200_OK
 )
 async def get_frequency_list():
+    """Return the available frequency groups and their frequencies."""
     return FrequencyGroupResponse(
         available_groups=[
             FrequencyGroupItem(
@@ -34,4 +34,5 @@ async def get_frequency_list():
     response_model=GainOptionResponse
 )
 async def get_gain_options():
+    """Return the available gain options."""
     return GainOptionResponse(gain_options=STANDARD_GAIN_OPTIONS)

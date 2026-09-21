@@ -11,6 +11,7 @@ class TrainingQuestion:
 def generate_question(
     training_rule: TrainingRule
 ) -> TrainingQuestion:
+    """Generate a question using random values from a training rule."""
     return TrainingQuestion(
         frequency=training_rule.get_random_frequency(), 
         gain=training_rule.get_random_gain(),

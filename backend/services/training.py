@@ -25,6 +25,11 @@ async def create_training_session(
     max_frequency: float,
     gain_level: float
 ) -> TrainingSession:
+    """Validate training settings and create a training session.
+
+    Raises:
+        SessionCreationException: If a frequency or gain setting is invalid.
+    """
     if not (validate_frequency(min_frequency) and validate_frequency(max_frequency)):
         raise SessionCreationException("Invalid Frequency Option")
     if not validate_gain(gain_level):
@@ -42,6 +47,7 @@ async def create_training_question(
     db: AsyncSession,
     t_session: TrainingSession
 ) -> TrainingQuestion:
+    """Generate and persist a training question for a session."""
     rule = TrainingRule(
         frequencies=get_frequency_range(t_session.min_frequency, t_session.max_frequency),
         gain_level=t_session.gain_level,

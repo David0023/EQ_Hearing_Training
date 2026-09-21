@@ -6,6 +6,7 @@ class UserCreationException(Exception):
     pass
 
 async def get_one(db: AsyncSession, *conditions) -> User | None:
+    """Return the first user matching the SQLAlchemy conditions."""
     query = select(User).where(*conditions).order_by(User.id.asc())
     result = await db.execute(query)
     return result.scalar_one_or_none()
@@ -17,6 +18,11 @@ async def create(
     username: str,
     hashed_pwd: str
 ) -> User:
+    """Persist and return a user.
+
+    Raises:
+        UserCreationException: If persisting the user fails.
+    """
     new_user = User(
         email=email,
         username=username,
@@ -36,6 +42,11 @@ async def update(
     user: User,
     **kwargs
 ) -> User:
+    """Update and return a user.
+
+    Raises:
+        ValueError: If an unsupported field is provided.
+    """
     allowed_fields = {
         "username",
         "email",
@@ -62,6 +73,7 @@ async def delete_one(
     db: AsyncSession,
     *conditions
 ) -> int:
+    """Delete the first matching user by ascending ID."""
     query = select(User).where(*conditions).order_by(User.id.asc())
     result = await db.execute(query)
     user = result.scalars().first()
@@ -80,6 +92,7 @@ async def delete_many(
     db: AsyncSession,
     *conditions
 ) -> int:
+    """Delete all users matching the conditions."""
     query = delete(User).where(*conditions)
     try:
         result = await db.execute(query)

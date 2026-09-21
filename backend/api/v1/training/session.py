@@ -27,6 +27,7 @@ async def get_all_sessions(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
+    """Return all training sessions belonging to the authenticated user."""
     sessions = await training_session.get_many(db, user_id=user.id)
     return GetAllTrainingSessionsResponse(sessions=sessions)
 
@@ -39,6 +40,11 @@ async def create_session(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
+    """Create and return a training session for the authenticated user.
+
+    Raises:
+        HTTPException: If session creation fails.
+    """
     try:
         session = await create_training_session(
             db=db,
@@ -61,6 +67,11 @@ async def get_single_session(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
+    """Return one accessible training session with its questions.
+
+    Raises:
+        HTTPException: If the session does not exist or is not accessible.
+    """
     session = await training_session.get_one_with_questions(db, id=session_id)
 
     if not session:
