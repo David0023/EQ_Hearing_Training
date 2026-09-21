@@ -58,7 +58,7 @@ async def login(
 
     return {
         "access_token": create_access_token(
-            user_id=user.id,
+            user_id=existing_user.id,
             role="user"
         ),
         "token_type": "bearer"
