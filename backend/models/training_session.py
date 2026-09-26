@@ -35,7 +35,8 @@ class TrainingSession(Base):
 
     training_questions: Mapped[list["TrainingQuestion"]] = relationship(
         back_populates="training_session",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     __table_args__ = (

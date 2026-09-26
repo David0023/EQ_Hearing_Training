@@ -3,9 +3,9 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.training_session import TrainingSession
 
-async def get_one(db: AsyncSession, **kwargs) -> TrainingSession | None:
+async def get_one(db: AsyncSession, *conditions) -> TrainingSession | None:
     """Return one training session matching the given model fields."""
-    query = select(TrainingSession).filter_by(**kwargs)
+    query = select(TrainingSession).where(*conditions).order_by(TrainingSession.id.asc())
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
