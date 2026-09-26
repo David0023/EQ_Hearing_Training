@@ -2,7 +2,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.training_question import TrainingQuestion
 
-async def get_one(db: AsyncSession, **kwargs) -> TrainingQuestion | None:
+async def get_one(db: AsyncSession, *conditions) -> TrainingQuestion | None:
     """Return one training question matching the given model fields.
 
     Args:
@@ -12,7 +12,7 @@ async def get_one(db: AsyncSession, **kwargs) -> TrainingQuestion | None:
     Returns:
         The matching question, or None if no question matches.
     """
-    query = select(TrainingQuestion).filter_by(**kwargs)
+    query = select(TrainingQuestion).where(*conditions).order_by(TrainingQuestion.id.asc())
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
@@ -73,7 +73,7 @@ async def update(
     allowed_fields = {
         "user_frequency",
         "user_gain",
-        "response_time_ms",
+        "",
         "is_answered",
         "answered_at",
     }

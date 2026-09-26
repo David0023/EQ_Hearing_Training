@@ -13,6 +13,7 @@ class ViewTrainingQuestion(BaseModel):
     user_frequency: float | None
     user_gain: float | None
     is_answered: bool
+    is_correct: bool | None
     answered_at: datetime | None
 
 class GetTrainingQuestionResponse(BaseModel):
@@ -20,8 +21,8 @@ class GetTrainingQuestionResponse(BaseModel):
     question_type: QuestionType
 
 class GetAllTrainingQuestions(TrainingQuestionBase):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
+    questions: list[ViewTrainingQuestion]
+    question_type: QuestionType
 
 class AnswerQuestionRequest(BaseModel):
     user_frequency: float 
