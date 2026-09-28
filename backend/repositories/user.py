@@ -69,6 +69,20 @@ async def update(
         await db.rollback()
         raise e
 
+async def delete_this(
+    db: AsyncSession,
+    user: User | None
+) -> bool:
+    if user is None:
+        return False
+    try:
+        await db.delete(user)
+        await db.commit()
+        return True
+    except Exception as e:
+        await db.rollback()
+        raise e
+
 async def delete_one(
     db: AsyncSession,
     *conditions

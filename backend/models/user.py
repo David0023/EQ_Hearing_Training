@@ -12,5 +12,6 @@ class User(TimestampMixin, Base):
 
     training_sessions: Mapped[list["TrainingSession"]] = relationship(
         back_populates="user",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
