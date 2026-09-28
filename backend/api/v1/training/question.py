@@ -29,19 +29,6 @@ async def _authorize_session(user: User, session: TrainingSession | None):
     if session.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not accessible")
 
-
-async def _authorize_question(user: User, session: TrainingSession, question: TrainingQuestion):
-    """
-        Check if the session exists and if it belongs to the user.
-        Raises:
-            HTTPException: 404 if non-existent, 403 if not accessible.
-        """
-    _authorize_session(user, session)
-
-    if question.training_session_id != session.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This question does not belong to this session")
-
-
 @router.get(
     '/all/{session_id}',
     status_code=status.HTTP_200_OK,
@@ -53,7 +40,7 @@ async def get_all_questions(
     user: User = Depends(get_current_user)
 ):
     session = await training_session.get_one_with_questions(db, id=session_id)
-    _authorize_session(user, session)
+    await _authorize_session(user, session)
     return GetAllTrainingQuestions(
         questions=session.training_questions,
         question_type=session.question_type
@@ -75,22 +62,25 @@ async def start_question_or_continue(
     Raises:
         HTTPException: If the session does not exist or is not accessible.
     """
-    session = await training_session.get_one_with_questions(db, id=session_id)
-    _authorize_session(user, session)
+    # Lock the session (to prevent creating question twice)
+    session = await training_session.get_one(
+        db, TrainingSession.id == session_id, lock=True
+    )
+    await _authorize_session(user, session)
 
-    unanswered_questions = [
-        q for q in session.training_questions
-        if not q.is_answered
-    ]
-    if unanswered_questions:
-        response.status_code = status.HTTP_200_OK
+    unanswered_question = await training_question.get_one(
+        TrainingQuestion.training_session_id==session.id,
+        TrainingQuestion.is_answered.is_(False),
+        lock=True,
+    )
+    if not unanswered_question:
         return GetTrainingQuestionResponse(
-            question=unanswered_questions[0],
+            question=await create_training_question(db, session),
             question_type=session.question_type
         )
-
+    response.status_code = status.HTTP_200_OK
     return GetTrainingQuestionResponse(
-        question=await create_training_question(db, session),
+        question=unanswered_question,
         question_type=session.question_type
     )
 
@@ -110,18 +100,24 @@ async def answer_question(
     Raises:
         HTTPException: If the session or question is invalid, inaccessible, or completed.
     """
-    session = await training_session.get_one_with_questions(db, id=session_id)
-    _authorize_session(user, session)
 
-    matching_questions: list[TrainingQuestion] = [
-        q for q in session.training_questions
-        if q.id == question_id
-    ]
-    question = matching_questions[0] if matching_questions else None
+    # Lock the session (to prevent answering twice)
+    session = await training_session.get_one(
+        db, TrainingSession.id == session_id, lock=True
+    )
+    await _authorize_session(user, session)
+
+
+    question = await training_question.get_one(
+            db,
+            TrainingQuestion.training_session_id==session_id,
+            TrainingQuestion.id==question_id,
+            lock=True,
+    )
     if not question:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The question do not belong to this session"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The question cannot be found"
         )
     if question.is_answered:
         raise HTTPException(
@@ -129,7 +125,7 @@ async def answer_question(
                     detail="This question is already completed"
         )
     is_correct = True if (question.target_frequency==form.user_frequency and question.target_gain==form.user_gain) else False
-    await training_question.update(
+    return await training_question.update(
         db, question,
         user_frequency=form.user_frequency,
         user_gain=form.user_gain,
@@ -137,5 +133,3 @@ async def answer_question(
         is_correct=is_correct,
         answered_at=datetime.now(timezone.utc)
     )
-
-    return question

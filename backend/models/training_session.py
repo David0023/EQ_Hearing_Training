@@ -8,7 +8,7 @@ from models.enums import QuestionType
 class TrainingSession(Base):
     __tablename__ = "training_sessions"
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete='CASCADE'), nullable=False)
 
     question_type: Mapped[QuestionType] = mapped_column(
         SQLEnum(QuestionType),

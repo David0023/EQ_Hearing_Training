@@ -3,9 +3,13 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.training_session import TrainingSession
 
-async def get_one(db: AsyncSession, *conditions) -> TrainingSession | None:
+async def get_one(
+    db: AsyncSession, *conditions, lock: bool = False
+) -> TrainingSession | None:
     """Return one training session matching the given model fields."""
-    query = select(TrainingSession).where(*conditions).order_by(TrainingSession.id.asc())
+    query = select(TrainingSession).where(*conditions).order_by(TrainingSession.id.asc()).limit(1)
+    if lock:
+        query = query.with_for_update()
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
@@ -17,6 +21,7 @@ async def get_one_with_questions(
         select(TrainingSession)
         .options(selectinload(TrainingSession.training_questions))
         .filter_by(**kwargs)
+        .limit(1)
     )
     result = await db.execute(query)
     return result.scalar_one_or_none()
@@ -73,12 +78,27 @@ async def upate(
         await db.rollback()
         raise e
 
+async def delete_this(
+    db: AsyncSession,
+    session: TrainingSession | None
+) -> bool:
+    """Delete given training session"""
+    if not session:
+        return False
+    try:
+        await db.delete(session)
+        await db.commit()
+        return True
+    except Exception as e:
+        await db.rollback()
+        raise e
+
 async def delete_one(
     db: AsyncSession,
     *conditions
 ) -> int:
     """Delete the first matching training session by ascending ID."""
-    query = select(TrainingSession).where(*conditions).order_by(TrainingSession.id.asc())
+    query = select(TrainingSession).where(*conditions).order_by(TrainingSession.id.asc()).limit(1)
     result = await db.execute(query)
     session = result.scalars().first()
     if session is None:
@@ -94,10 +114,13 @@ async def delete_one(
 
 async def delete_many(
     db: AsyncSession,
-    *conditions
+    *conditions,
+    lock: bool = False
 ) -> int:
     """Delete all training sessions matching the conditions."""
     query = delete(TrainingSession).where(*conditions)
+    if lock:
+        query = query.with_update
     try:
         result = await db.execute(query)
         await db.commit()

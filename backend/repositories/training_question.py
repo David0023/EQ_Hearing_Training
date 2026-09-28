@@ -2,31 +2,46 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.training_question import TrainingQuestion
 
-async def get_one(db: AsyncSession, *conditions) -> TrainingQuestion | None:
+async def get_one(
+    db: AsyncSession, *conditions, lock: bool = False
+) -> TrainingQuestion | None:
     """Return one training question matching the given model fields.
 
     Args:
         db: The database session to use.
-        **kwargs: TrainingQuestion field names and values used as filters.
+        *conditions: WHERE clause for SQL
+        lock: lock the given row
 
     Returns:
         The matching question, or None if no question matches.
     """
-    query = select(TrainingQuestion).where(*conditions).order_by(TrainingQuestion.id.asc())
+    query = (
+        select(TrainingQuestion)
+        .where(*conditions)
+        .order_by(TrainingQuestion.id.asc())
+        .limit(1)
+    )
+    if lock:
+        query = query.with_for_update()
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
-async def get_many(db: AsyncSession, **kwargs) -> list[TrainingQuestion]:
+async def get_many(
+    db: AsyncSession, *conditions, lock: bool = False
+) -> list[TrainingQuestion]:
     """Return all training questions matching the given model fields.
 
     Args:
         db: The database session to use.
-        **kwargs: TrainingQuestion field names and values used as filters.
+        *conditions: WHERE clause for SQL
+        lock: lock the given row
 
     Returns:
         A list of matching questions.
     """
-    query = select(TrainingQuestion).filter_by(**kwargs)
+    query = select(TrainingQuestion).where(*conditions).order_by(TrainingQuestion.id.asc())
+    if lock:
+        query = query.with_for_update()
     result = await db.execute(query)
     return result.scalars().all()
 
@@ -73,7 +88,7 @@ async def update(
     allowed_fields = {
         "user_frequency",
         "user_gain",
-        "",
+        "is_correct",
         "is_answered",
         "answered_at",
     }

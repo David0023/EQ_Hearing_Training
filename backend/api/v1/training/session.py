@@ -12,7 +12,7 @@ from services.training import create_training_session
 from core.dependencies import get_db, get_current_user
 from models.user import User
 from models.training_session import TrainingSession
-from repositories import training_session, training_question
+from repositories import training_session
 
 router = APIRouter(
     prefix='/session',
@@ -87,7 +87,7 @@ async def get_single_session(
     """
     session = await training_session.get_one_with_questions(db, id=session_id)
 
-    _authorize_session(user, session)
+    await _authorize_session(user, session)
 
     return session
 
@@ -105,10 +105,12 @@ async def delete_one_session(
         Raises:
             HTTPException: If session delete fails
         """
-    session = await training_session.get_one(db, TrainingSession.id==session_id)
+    session = await training_session.get_one(
+        db, TrainingSession.id == session_id, lock=True
+    )
     
-    _authorize_session(user, session)
+    await _authorize_session(user, session)
 
-    await training_session.delete_one(db, TrainingSession.id==session_id)
+    await training_session.delete_this(db, session)
 
     # SQL will run deletion of question.
