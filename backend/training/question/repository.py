@@ -47,7 +47,8 @@ async def get_many(
 
 async def create(
     db: AsyncSession,
-    training_question: TrainingQuestion
+    training_question: TrainingQuestion,
+    flush: bool = False,
 ) -> TrainingQuestion:
     """Persist and return a training question.
 
@@ -59,17 +60,15 @@ async def create(
         The persisted training question.
     """
     db.add(training_question)
-    try:
-        await db.commit()
+    if flush:
+        await db.flush()
         await db.refresh(training_question)
-        return training_question
-    except Exception as e:
-        await db.rollback()
-        raise e
+    return training_question
 
 async def update(
     db: AsyncSession,
     training_question: TrainingQuestion,
+    flush: bool = False,
     **kwargs
 ) -> TrainingQuestion:
     """Update and return a training question.
@@ -98,19 +97,18 @@ async def update(
             f"Cannot update fields: {', '.join(sorted(invalid_fields))}"
         )
 
-    try:
-        for field, value in kwargs.items():
-            setattr(training_question, field, value)
-        await db.commit()
+    for field, value in kwargs.items():
+        setattr(training_question, field, value)
+
+    if flush:
+        await db.flush()
         await db.refresh(training_question)
-        return training_question
-    except Exception as e:
-        await db.rollback()
-        raise e
+    return training_question
 
 async def delete_one(
     db: AsyncSession,
-    *conditions
+    *conditions,
+    flush: bool = False,
 ) -> int:
     """Delete the first matching training question by ascending ID.
 
@@ -127,17 +125,15 @@ async def delete_one(
     if training_question is None:
         return 0
 
-    try:
-        await db.delete(training_question)
-        await db.commit()
-        return 1
-    except Exception as e:
-        await db.rollback()
-        raise e
+    await db.delete(training_question)
+    if flush:
+        await db.flush()
+    return 1
 
 async def delete_many(
     db: AsyncSession,
-    *conditions
+    *conditions,
+    flush: bool = False,
 ) -> int:
     """Delete all training questions matching the conditions.
 
@@ -149,10 +145,7 @@ async def delete_many(
         The number of deleted questions.
     """
     query = delete(TrainingQuestion).where(*conditions)
-    try:
-        result = await db.execute(query)
-        await db.commit()
-        return result.rowcount or 0
-    except Exception as e:
-        await db.rollback()
-        raise e
+    result = await db.execute(query)
+    if flush:
+        await db.flush()
+    return result.rowcount or 0

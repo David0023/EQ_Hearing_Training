@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from auth.dependencies import get_current_user
 from db.database import get_db
@@ -22,4 +22,9 @@ async def delete_me(
     current_user: User = Depends(get_current_user)
 ):
     """Delete the authenticated user."""
-    await repository.delete_this(db, current_user)
+    try:
+        await repository.delete_this(db, current_user)
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Cannot be deleted")

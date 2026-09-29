@@ -40,6 +40,7 @@ async def create(
 async def update(
     db: AsyncSession,
     user: User,
+    flush: bool = False,
     **kwargs
 ) -> User:
     """Update and return a user.
@@ -59,59 +60,21 @@ async def update(
             f"Cannot update fields: {', '.join(sorted(invalid_fields))}"
         )
 
-    try:
-        for field, value in kwargs.items():
-            setattr(user, field, value)
-        await db.commit()
+    for field, value in kwargs.items():
+        setattr(user, field, value)
+    if flush:
+        await db.flush()
         await db.refresh(user)
-        return user
-    except Exception as e:
-        await db.rollback()
-        raise e
+    return user
 
 async def delete_this(
     db: AsyncSession,
-    user: User | None
+    user: User | None,
+    flush: bool = False,
 ) -> bool:
     if user is None:
         return False
-    try:
-        await db.delete(user)
-        await db.commit()
-        return True
-    except Exception as e:
-        await db.rollback()
-        raise e
-
-async def delete_one(
-    db: AsyncSession,
-    *conditions
-) -> int:
-    """Delete the first matching user by ascending ID."""
-    query = select(User).where(*conditions).order_by(User.id.asc())
-    result = await db.execute(query)
-    user = result.scalars().first()
-    if user is None:
-        return 0
-
-    try:
-        await db.delete(user)
-        await db.commit()
-        return 1
-    except Exception as e:
-        await db.rollback()
-        raise e
-
-async def delete_many(
-    db: AsyncSession,
-    *conditions
-) -> int:
-    """Delete all users matching the conditions."""
-    query = delete(User).where(*conditions)
-    try:
-        result = await db.execute(query)
-        await db.commit()
-        return result.rowcount or 0
-    except Exception as e:
-        await db.rollback()
-        raise e
+    await db.delete(user)
+    if flush:
+        await db.flush()
+    return True

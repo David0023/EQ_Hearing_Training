@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from training.enums import QuestionType
+from datetime import datetime, timezone
+from training.enums import SessionStatus
 from training.session.model import TrainingSession
 from training.session import repository
 from training.domain.info import validate_frequency, validate_gain
@@ -35,4 +36,37 @@ async def create_training_session(
         max_frequency=request.max_frequency,
         gain_level=request.gain_level
     )
-    return await repository.create(db, session)
+
+    try:
+        session = await repository.create(db, session, flush=True)
+        await db.commit()
+        await db.refresh(session)
+        return session
+    except Exception as e:
+        await db.rollback()
+        raise e
+
+async def delete_session(
+    db: AsyncSession,
+    session: TrainingSession
+) -> bool:
+    try:
+        deleted = await repository.delete_this(db=db, session=session, flush=True)
+        await db.commit()
+        return deleted
+    except Exception as e:
+        await db.rollback()
+        raise e
+
+async def mark_session_complete(
+    db: AsyncSession,
+    session: TrainingSession,
+) -> TrainingSession:
+    """
+    Mark given session as complete. No commit.
+    """
+    session = await repository.update(
+        db, session, flush=True,
+        session_status=SessionStatus.COMPLETED, completed_at=datetime.now(timezone.utc)
+    )
+    return session

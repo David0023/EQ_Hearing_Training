@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Response, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.database import get_db
 from training.dependencies import get_locked_session, get_session_with_questions
@@ -27,7 +27,10 @@ async def start_question_or_continue(
     response: Response, db: AsyncSession = Depends(get_db),
     session: TrainingSession = Depends(get_locked_session),
 ):
-    question, created = await service.get_or_create_question(db, session)
+    try:
+        question, created = await service.get_or_create_question(db, session)
+    except service.SessionCompletedException:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Session Completed. Could not start a new question")
     if not created:
         response.status_code = status.HTTP_200_OK
     return GetTrainingQuestionResponse(question=question, question_type=session.question_type)
@@ -39,4 +42,9 @@ async def answer_question(
     db: AsyncSession = Depends(get_db),
     session: TrainingSession = Depends(get_locked_session),
 ):
-    return await service.answer_question(db, session, question_id, form)
+    try:
+        return await service.answer_question(db, session, question_id, form)
+    except service.QuestionAnsweredException:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="The question is already answered.")
+    except service.QuestionNotFoundException:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="The question could not be found.")

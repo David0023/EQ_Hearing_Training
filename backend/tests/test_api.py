@@ -12,6 +12,7 @@ from user import repository as user_repository
 pytestmark = pytest.mark.anyio
 BASE = '/api/vi/training'
 SETTINGS = {
+    'num_questions': 2,
     'question_type': 'simple_blind', 'min_frequency': 125,
     'max_frequency': 1000, 'gain_level': 3.0,
 }
@@ -153,3 +154,67 @@ async def test_user_creation_failure_rolls_back(client, headers):
         # The same session must be usable after the failed commit.
         created = await user_repository.create(db, 'fresh@example.com', 'fresh', 'hash')
         assert created.id is not None
+
+
+async def test_last_answer_completes_session(client, headers):
+    response = await client.post(
+        f'{BASE}/session/', headers=headers, json=SETTINGS | {'num_questions': 1},
+    )
+    assert response.status_code == 201, response.text
+    sid = response.json()['id']
+    question = (await client.post(f'{BASE}/question/{sid}', headers=headers)).json()['question']
+    response = await client.put(
+        f'{BASE}/question/{sid}/{question["id"]}', headers=headers,
+        json={'user_frequency': question['target_frequency'], 'user_gain': question['target_gain']},
+    )
+    assert response.status_code == 200, response.text
+    detail = (await client.get(f'{BASE}/session/{sid}', headers=headers)).json()
+    assert detail['session_status'] == 'completed'
+    assert detail['completed_at'] is not None
+    assert detail['training_questions'][0]['is_answered'] is True
+    response = await client.post(f'{BASE}/question/{sid}', headers=headers)
+    assert response.status_code == 400, response.text
+
+
+async def test_completion_failure_rolls_back_answer(client, headers, monkeypatch):
+    from training.session import service as session_service
+
+    response = await client.post(
+        f'{BASE}/session/', headers=headers, json=SETTINGS | {'num_questions': 1},
+    )
+    sid = response.json()['id']
+    question = (await client.post(f'{BASE}/question/{sid}', headers=headers)).json()['question']
+    monkeypatch.setattr(session_service, 'mark_session_complete', AsyncMock(side_effect=RuntimeError('completion failed')))
+    with pytest.raises(RuntimeError, match='completion failed'):
+        await client.put(
+            f'{BASE}/question/{sid}/{question["id"]}', headers=headers,
+            json={'user_frequency': question['target_frequency'], 'user_gain': question['target_gain']},
+        )
+    detail = (await client.get(f'{BASE}/session/{sid}', headers=headers)).json()
+    assert detail['session_status'] == 'in_progress'
+    assert detail['completed_at'] is None
+    assert detail['training_questions'][0]['is_answered'] is False
+
+
+@pytest.mark.parametrize('method', ['delete_one', 'delete_many'])
+async def test_question_deletion_preserves_other_rows(client, headers, method):
+    from training.question import repository as question_repository
+    from training.question.model import TrainingQuestion
+
+    first = await create_session(client, headers)
+    second = await create_session(client, headers)
+    keep = (await client.post(f'{BASE}/question/{first}', headers=headers)).json()['question']['id']
+    target = (await client.post(f'{BASE}/question/{second}', headers=headers)).json()['question']['id']
+    async with database.SessionLocal() as db:
+        deleted = await getattr(question_repository, method)(
+            db, TrainingQuestion.id == target, flush=True,
+        )
+        assert deleted == 1
+        assert [q.id for q in await question_repository.get_many(db)] == [keep]
+        await db.rollback()
+    async with database.SessionLocal() as db:
+        assert [q.id for q in await question_repository.get_many(db)] == [keep, target]
+        await getattr(question_repository, method)(db, TrainingQuestion.id == target)
+        await db.commit()
+    async with database.SessionLocal() as db:
+        assert [q.id for q in await question_repository.get_many(db)] == [keep]

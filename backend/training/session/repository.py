@@ -35,21 +35,20 @@ async def get_many(db: AsyncSession, *conditions) -> list[TrainingSession]:
 
 async def create(
     db: AsyncSession,
-    training_session: TrainingSession
+    training_session: TrainingSession,
+    flush: bool = False,
 ) -> TrainingSession:
     """Persist and return a training session."""
     db.add(training_session)
-    try:
-        await db.commit()
+    if flush:
+        await db.flush()
         await db.refresh(training_session)
-        return training_session
-    except Exception as e:
-        await db.rollback()
-        raise e
+    return training_session
 
 async def update(
     db: AsyncSession,
     session: TrainingSession,
+    flush: bool = False,
     **kwargs
 ) -> TrainingSession:
     """Update and return a training session.
@@ -69,63 +68,22 @@ async def update(
             f"Cannot update fields: {', '.join(sorted(invalid_fields))}"
         )
 
-    try:
-        for field, value in kwargs.items():
-            setattr(session, field, value)
-        await db.commit()
+    for field, value in kwargs.items():
+        setattr(session, field, value)
+    if flush:
+        await db.flush()
         await db.refresh(session)
-        return session
-    except Exception as e:
-        await db.rollback()
-        raise e
+    return session
 
 async def delete_this(
     db: AsyncSession,
-    session: TrainingSession | None
+    session: TrainingSession | None,
+    flush: bool = False
 ) -> bool:
     """Delete given training session"""
     if not session:
         return False
-    try:
-        await db.delete(session)
-        await db.commit()
-        return True
-    except Exception as e:
-        await db.rollback()
-        raise e
-
-async def delete_one(
-    db: AsyncSession,
-    *conditions
-) -> int:
-    """Delete the first matching training session by ascending ID."""
-    query = select(TrainingSession).where(*conditions).order_by(TrainingSession.id.asc()).limit(1)
-    result = await db.execute(query)
-    session = result.scalars().first()
-    if session is None:
-        return 0
-
-    try:
-        await db.delete(session)
-        await db.commit()
-        return 1
-    except Exception as e:
-        await db.rollback()
-        raise e
-
-async def delete_many(
-    db: AsyncSession,
-    *conditions,
-    lock: bool = False
-) -> int:
-    """Delete all training sessions matching the conditions."""
-    query = delete(TrainingSession).where(*conditions)
-    if lock:
-        query = query.with_update
-    try:
-        result = await db.execute(query)
-        await db.commit()
-        return result.rowcount or 0
-    except Exception as e:
-        await db.rollback()
-        raise e
+    await db.delete(session)
+    if flush:
+        await db.flush()
+    return True

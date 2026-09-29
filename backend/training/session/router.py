@@ -8,7 +8,7 @@ from training.session.schema import (
     GetAllTrainingSessionsResponse
 )
 
-from training.session.service import create_training_session, SessionCreationException
+from training.session import service
 from auth.dependencies import get_current_user
 from db.database import get_db
 from user.model import User
@@ -48,12 +48,12 @@ async def create_session(
         HTTPException: If session creation fails.
     """
     try:
-        return await create_training_session(
+        return await service.create_training_session(
             db=db,
             user_id=user.id,
             request=request
         )
-    except SessionCreationException as e:
+    except service.SessionCreationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 @router.get('/{session_id}',
@@ -71,4 +71,4 @@ async def delete_one_session(
     db: AsyncSession = Depends(get_db),
     session: TrainingSession = Depends(get_locked_session),
 ):
-    await repository.delete_this(db, session)
+    await service.delete_session(db, session)

@@ -11,7 +11,7 @@ class TrainingSession(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete='CASCADE'), nullable=False)
 
     # Training session set values
-    num_question: Mapped[int] = mapped_column(nullable=False)
+    num_questions: Mapped[int] = mapped_column(nullable=False)
     question_type: Mapped[QuestionType] = mapped_column(
             SQLEnum(QuestionType),
             nullable=False,
