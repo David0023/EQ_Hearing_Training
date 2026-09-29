@@ -1,9 +1,10 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from training.enums import QuestionType
+from training.enums import QuestionType, SessionStatus
 from training.question.schema import ViewTrainingQuestion
 
 class TrainingSessionBase(BaseModel):
+    num_questions: int
     question_type: QuestionType
     min_frequency: float
     max_frequency: float
@@ -12,21 +13,18 @@ class TrainingSessionBase(BaseModel):
 class TrainingSessionCreateRequest(TrainingSessionBase):
     pass
 
-class TrainingSessionCreateResponse(TrainingSessionBase):
+class TrainingSessionInfo(TrainingSessionBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    user_id: int
+    session_status: SessionStatus
     started_at: datetime
     completed_at: datetime | None
 
-class GetTrainingSessionResponse(TrainingSessionBase):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    started_at: datetime
-    completed_at: datetime | None
+class TrainingSessionCreateResponse(TrainingSessionInfo):
+    pass
 
-class GetTrainingSessionWithQuestionsResponse(GetTrainingSessionResponse):
+class GetTrainingSessionWithQuestionsResponse(TrainingSessionInfo):
     training_questions: list[ViewTrainingQuestion]
 
 class GetAllTrainingSessionsResponse(BaseModel):
-    sessions: list[GetTrainingSessionResponse]
+    sessions: list[TrainingSessionInfo]

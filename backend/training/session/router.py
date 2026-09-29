@@ -30,7 +30,7 @@ async def get_all_sessions(
     user: User = Depends(get_current_user)
 ):
     """Return all training sessions belonging to the authenticated user."""
-    sessions = await repository.get_many(db, user_id=user.id)
+    sessions = await repository.get_many(db, User.id==user.id)
     return GetAllTrainingSessionsResponse(sessions=sessions)
 
 @router.post('/',
@@ -48,15 +48,11 @@ async def create_session(
         HTTPException: If session creation fails.
     """
     try:
-        session = await create_training_session(
+        return await create_training_session(
             db=db,
             user_id=user.id,
-            question_type=request.question_type,
-            min_frequency=request.min_frequency,
-            max_frequency=request.max_frequency,
-            gain_level=request.gain_level
+            request=request
         )
-        return session
     except SessionCreationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 

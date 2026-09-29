@@ -3,23 +3,30 @@ from sqlalchemy import DateTime, func, ForeignKey, CheckConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from db.base import Base
-from training.enums import QuestionType
+from training.enums import QuestionType, SessionStatus
 
 class TrainingSession(Base):
     __tablename__ = "training_sessions"
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete='CASCADE'), nullable=False)
 
+    # Training session set values
+    num_question: Mapped[int] = mapped_column(nullable=False)
     question_type: Mapped[QuestionType] = mapped_column(
-        SQLEnum(QuestionType),
-        nullable=False,
-    )
-
+            SQLEnum(QuestionType),
+            nullable=False,
+        )
     min_frequency: Mapped[float] = mapped_column(nullable=False)
     max_frequency: Mapped[float] = mapped_column(nullable=False)
     gain_level: Mapped[float] = mapped_column(nullable=False)
 
 
+    # Session status values
+    session_status: Mapped[SessionStatus] = mapped_column(
+        SQLEnum(SessionStatus),
+        nullable=False,
+        default=SessionStatus.IN_PROGRESS
+    )
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

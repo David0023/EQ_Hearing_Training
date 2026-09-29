@@ -27,9 +27,9 @@ async def get_one_with_questions(
     return result.scalar_one_or_none()
 
 
-async def get_many(db: AsyncSession, **kwargs) -> list[TrainingSession]:
+async def get_many(db: AsyncSession, *conditions) -> list[TrainingSession]:
     """Return all training sessions matching the given model fields."""
-    query = select(TrainingSession).filter_by(**kwargs)
+    query = select(TrainingSession).where(*conditions)
     result = await db.execute(query)
     return result.scalars().all()
 
@@ -58,7 +58,8 @@ async def update(
         ValueError: If an unsupported field is provided.
     """
     allowed_fields = {
-        "completed_at"
+        "completed_at",
+        "session_status"
     }
 
     invalid_fields = set(kwargs) - allowed_fields
