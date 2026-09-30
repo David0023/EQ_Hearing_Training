@@ -13,7 +13,6 @@ from auth.dependencies import get_current_user
 from db.database import get_db
 from user.model import User
 from training.session.model import TrainingSession
-from training.session import repository
 from training.dependencies import get_session_with_questions, get_locked_session
 
 router = APIRouter(
@@ -30,8 +29,7 @@ async def get_all_sessions(
     user: User = Depends(get_current_user)
 ):
     """Return all training sessions belonging to the authenticated user."""
-    sessions = await repository.get_many(db, User.id==user.id)
-    return GetAllTrainingSessionsResponse(sessions=sessions)
+    return GetAllTrainingSessionsResponse(sessions= await service.get_all_my_sessions(db, user.id))
 
 @router.post('/',
     status_code=status.HTTP_201_CREATED,
@@ -60,9 +58,7 @@ async def create_session(
     status_code=status.HTTP_200_OK,
     response_model=GetTrainingSessionWithQuestionsResponse
 )
-async def get_single_session(
-    session: TrainingSession = Depends(get_session_with_questions),
-):
+async def get_single_session(session: TrainingSession = Depends(get_session_with_questions)):
     return session
 
 
@@ -71,4 +67,8 @@ async def delete_one_session(
     db: AsyncSession = Depends(get_db),
     session: TrainingSession = Depends(get_locked_session),
 ):
-    await service.delete_session(db, session)
+    try:
+        await service.delete_session(db, session)
+    except service.SessionDeletionException as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        

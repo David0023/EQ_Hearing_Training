@@ -4,28 +4,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from training.session.model import TrainingSession
 
 async def get_one(
-    db: AsyncSession, *conditions, lock: bool = False
+    db: AsyncSession, *conditions, lock: bool = False, load_questions: bool = False,
 ) -> TrainingSession | None:
     """Return one training session matching the given model fields."""
     query = select(TrainingSession).where(*conditions).order_by(TrainingSession.id.asc()).limit(1)
     if lock:
         query = query.with_for_update()
+    if load_questions:
+        query = query.options(selectinload(TrainingSession.training_questions))
     result = await db.execute(query)
     return result.scalar_one_or_none()
-
-async def get_one_with_questions(
-        db: AsyncSession, **kwargs
-) -> TrainingSession | None:
-    """Return one training session with its training questions loaded."""
-    query = (
-        select(TrainingSession)
-        .options(selectinload(TrainingSession.training_questions))
-        .filter_by(**kwargs)
-        .limit(1)
-    )
-    result = await db.execute(query)
-    return result.scalar_one_or_none()
-
 
 async def get_many(db: AsyncSession, *conditions) -> list[TrainingSession]:
     """Return all training sessions matching the given model fields."""

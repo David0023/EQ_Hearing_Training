@@ -5,11 +5,26 @@ from training.session.model import TrainingSession
 from training.session import repository
 from training.domain.info import validate_frequency, validate_gain
 
-
 from training.session.schema import TrainingSessionCreateRequest
 
 class SessionCreationException(Exception):
     pass
+
+class SessionDeletionException(Exception):
+    pass
+
+async def get_all_my_sessions(db: AsyncSession, user_id: int) -> list[TrainingSession]:
+    return await repository.get_many(db, TrainingSession.user_id==user_id)
+
+async def get_session(
+    db: AsyncSession, *,
+    session_id: int, lock: bool=False, load_questions: bool=False
+) -> TrainingSession | None:
+    return await repository.get_one(
+        db, TrainingSession.id==session_id, 
+        lock=lock, load_questions=load_questions
+    )
+
 
 async def create_training_session(
     db: AsyncSession,
@@ -42,21 +57,20 @@ async def create_training_session(
         await db.commit()
         await db.refresh(session)
         return session
-    except Exception as e:
+    except Exception:
         await db.rollback()
-        raise e
+        raise
 
 async def delete_session(
     db: AsyncSession,
     session: TrainingSession
-) -> bool:
+) -> None:
     try:
-        deleted = await repository.delete_this(db=db, session=session, flush=True)
+        await repository.delete_this(db=db, session=session)
         await db.commit()
-        return deleted
     except Exception as e:
         await db.rollback()
-        raise e
+        raise SessionDeletionException("Training session cannot be deleted") from e
 
 async def mark_session_complete(
     db: AsyncSession,

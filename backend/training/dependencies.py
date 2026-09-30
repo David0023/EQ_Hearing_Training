@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from auth.dependencies import get_current_user
 from db.database import get_db
-from training.session import repository
+from training.session import service
 from training.session.model import TrainingSession
 from user.model import User
 
@@ -19,7 +19,14 @@ async def get_session_with_questions(
     session_id: int, db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> TrainingSession:
-    session = await repository.get_one_with_questions(db, id=session_id)
+    """
+    Get Training session of given Session ID.
+    Args: 
+        - session_id: int
+        - db: AsyncSession
+        - user: User
+    """
+    session = await service.get_session(db, session_id=session_id, load_questions=True)
     return authorize_session(user, session)
 
 
@@ -27,5 +34,5 @@ async def get_locked_session(
     session_id: int, db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> TrainingSession:
-    session = await repository.get_one(db, TrainingSession.id == session_id, lock=True)
+    session = await service.get_session(db, session_id=session_id, lock=True)
     return authorize_session(user, session)
