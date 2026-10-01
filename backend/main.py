@@ -4,7 +4,6 @@ from db.database import init_db
 import uvicorn
 
 from auth.router import router as auth_router
-from user.router import router as user_router
 from api.v1.router import router as v1_router
 
 # Life cycle of a fastapi app
@@ -21,7 +20,6 @@ def read_root():
     return {"Hello": "World"}
 
 app.include_router(auth_router)
-app.include_router(user_router)
 app.include_router(v1_router)
 
 

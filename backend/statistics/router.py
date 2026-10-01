@@ -13,16 +13,15 @@ router = APIRouter(
     tags=['statistics']
 )
 
-@router.get('/training/session/{session_id}')
+@router.get('/today')
 async def my_statistics(
-    session_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
     ...
     # TODO: Finish this
 
-@router.get('/me')
+@router.get('/week')
 async def my_statistics(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)

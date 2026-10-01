@@ -4,7 +4,7 @@ from training.info.schema import FrequencyGroupItem, FrequencyGroupResponse, Gai
 from training.domain.info import FREQUENCY_GROUPS, STANDARD_GAIN_OPTIONS
 
 router = APIRouter(
-    prefix='/info',
+    prefix='/infos',
     tags=['info']
 )
 

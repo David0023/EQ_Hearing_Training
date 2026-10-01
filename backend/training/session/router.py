@@ -16,7 +16,7 @@ from training.session.model import TrainingSession
 from training.dependencies import get_session_with_questions, get_locked_session
 
 router = APIRouter(
-    prefix='/session',
+    prefix='/sessions',
     tags=['session']
 )
 
@@ -39,7 +39,7 @@ async def get_recent_sessions(
     except service.PaginationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
-@router.post('/',
+@router.post('',
     status_code=status.HTTP_201_CREATED,
     response_model=TrainingSessionCreateResponse
 )

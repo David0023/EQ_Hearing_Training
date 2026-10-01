@@ -7,7 +7,7 @@ from user.model import User
 from user.schema import UserMeResponse
 
 # Keep the existing public URLs while separating account routes from authentication.
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/users", tags=["user"])
 
 @router.get('/me', status_code=status.HTTP_200_OK, response_model=UserMeResponse)
 async def get_me(

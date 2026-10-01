@@ -9,10 +9,9 @@ from training.question.schema import (
 )
 from training.session.model import TrainingSession
 
-router = APIRouter(prefix="/question", tags=["training"])
+router = APIRouter(prefix="/sessions", tags=["questions"])
 
-
-@router.get("/all/{session_id}", response_model=GetAllTrainingQuestions)
+@router.get("/{session_id}/questions", response_model=GetAllTrainingQuestions)
 async def get_all_questions(
     session: TrainingSession = Depends(get_session_with_questions),
 ):
@@ -21,7 +20,7 @@ async def get_all_questions(
     )
 
 
-@router.post("/{session_id}", status_code=status.HTTP_201_CREATED,
+@router.post("/{session_id}/questions", status_code=status.HTTP_201_CREATED,
              response_model=GetTrainingQuestionResponse)
 async def start_question_or_continue(
     response: Response, db: AsyncSession = Depends(get_db),
@@ -36,7 +35,7 @@ async def start_question_or_continue(
     return GetTrainingQuestionResponse(question=question, question_type=session.question_type)
 
 
-@router.put("/{session_id}/{question_id}", response_model=ViewTrainingQuestion)
+@router.put("/{session_id}/questions/{question_id}", response_model=ViewTrainingQuestion)
 async def answer_question(
     question_id: int, form: AnswerQuestionRequest,
     db: AsyncSession = Depends(get_db),

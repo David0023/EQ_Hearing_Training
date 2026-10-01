@@ -61,7 +61,7 @@ rely on router imports. Repository writes currently own commit/rollback; callers
 must hold the session lock until a question is created or answered.
 
 Existing public URLs are preserved: `/auth/*`, `/api/vi/training/*`, and
-`/api/vi/info/*`. The existing `vi` prefix is intentional for compatibility.
+`/api/vi/infos/*`. The existing `vi` prefix is intentional for compatibility.
 Python imports use `backend/` as the application root, matching the Docker working
 directory. For local execution from the repository root:
 
