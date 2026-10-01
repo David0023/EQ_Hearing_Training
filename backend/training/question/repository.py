@@ -1,4 +1,5 @@
-from sqlalchemy import select, delete
+from typing import NamedTuple
+from sqlalchemy import select, delete, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from training.question.model import TrainingQuestion
 
@@ -26,7 +27,7 @@ async def get_one(
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
-async def get_many(
+async def get_all(
     db: AsyncSession, *conditions, lock: bool = False
 ) -> list[TrainingQuestion]:
     """Return all training questions matching the given model fields.
@@ -44,6 +45,34 @@ async def get_many(
         query = query.with_for_update()
     result = await db.execute(query)
     return result.scalars().all()
+
+
+class SessionStatistics(NamedTuple):
+    answered_count: int
+    correct_count: int
+
+async def get_session_statistics(
+    db: AsyncSession, session_ids: list[int]
+) -> dict[int, SessionStatistics]:
+    """Return answered and correct question counts by session ID."""
+    if not session_ids:
+        return {}
+
+    query = (
+        select(
+            TrainingQuestion.training_session_id,
+            func.sum(case((TrainingQuestion.is_answered.is_(True), 1), else_=0)),
+            func.sum(case((TrainingQuestion.is_correct.is_(True), 1), else_=0)),
+        )
+        .where(TrainingQuestion.training_session_id.in_(session_ids))
+        .group_by(TrainingQuestion.training_session_id)
+    )
+    result = await db.execute(query)
+    return {
+        session_id: SessionStatistics(answered_count=int(answered), correct_count=int(correct))
+        for session_id, answered, correct in result.all()
+    }
+
 
 async def create(
     db: AsyncSession,
@@ -105,37 +134,13 @@ async def update(
         await db.refresh(training_question)
     return training_question
 
-async def delete_one(
+async def delete_these(
     db: AsyncSession,
     *conditions,
     flush: bool = False,
+    count: int = 1,
 ) -> int:
-    """Delete the first matching training question by ascending ID.
-
-    Args:
-        db: The database session to use.
-        *conditions: SQLAlchemy conditions used to select the question.
-
-    Returns:
-        1 if a question was deleted, otherwise 0.
-    """
-    query = select(TrainingQuestion).where(*conditions).order_by(TrainingQuestion.id.asc())
-    result = await db.execute(query)
-    training_question = result.scalars().first()
-    if training_question is None:
-        return 0
-
-    await db.delete(training_question)
-    if flush:
-        await db.flush()
-    return 1
-
-async def delete_many(
-    db: AsyncSession,
-    *conditions,
-    flush: bool = False,
-) -> int:
-    """Delete all training questions matching the conditions.
+    """Delete given amount of training questions matching the conditions.
 
     Args:
         db: The database session to use.
@@ -144,7 +149,13 @@ async def delete_many(
     Returns:
         The number of deleted questions.
     """
-    query = delete(TrainingQuestion).where(*conditions)
+    matching_ids = (
+        select(TrainingQuestion.id)
+        .where(*conditions)
+        .order_by(TrainingQuestion.id.asc())
+        .limit(count)
+    )
+    query = delete(TrainingQuestion).where(TrainingQuestion.id.in_(matching_ids))
     result = await db.execute(query)
     if flush:
         await db.flush()

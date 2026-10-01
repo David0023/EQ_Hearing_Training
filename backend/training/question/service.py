@@ -68,9 +68,15 @@ async def get_or_create_question(
         TrainingQuestion.is_answered.is_(False),
         lock=True,
     )
-    if question is not None:
-        return question, False
-    return await create_training_question(db, session), True
+    try:
+        await session_service.update_timestamp(db, session)
+        if question is not None:
+            await db.commit()
+            return question, False
+        return await create_training_question(db, session), True
+    except Exception:
+        await db.rollback()
+        raise
 
 
 async def answer_question(
@@ -104,12 +110,13 @@ async def answer_question(
         )
 
         # Check if the session is complete. Mark as complete if so.
-        questions = await repository.get_many(
+        questions = await repository.get_all(
                 db, TrainingQuestion.training_session_id == session.id,
         )
         if len(questions) == session.num_questions:
             await session_service.mark_session_complete(db, session)
 
+        await session_service.update_timestamp(db, session)
         await db.commit()
         return question
     except Exception as e:

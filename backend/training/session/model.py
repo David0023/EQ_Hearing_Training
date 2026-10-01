@@ -33,6 +33,13 @@ class TrainingSession(Base):
         nullable=False
     )
 
+    last_accessed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True # To sort with recent options
+    )
+
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from training.session.schema import (
     TrainingSessionCreateRequest,
     TrainingSessionCreateResponse,
-    GetTrainingSessionWithQuestionsResponse,
-    GetAllTrainingSessionsResponse
+    TrainingSessionWithQuestion,
+    TrainingSessionSummaryList,
 )
 
 from training.session import service
@@ -20,16 +20,24 @@ router = APIRouter(
     tags=['session']
 )
 
-@router.get('/all',
+@router.get('/recent',
     status_code=status.HTTP_200_OK,
-    response_model=GetAllTrainingSessionsResponse
+    response_model=TrainingSessionSummaryList
 )
-async def get_all_sessions(
+async def get_recent_sessions(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: User = Depends(get_current_user),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1),
 ):
-    """Return all training sessions belonging to the authenticated user."""
-    return GetAllTrainingSessionsResponse(sessions= await service.get_all_my_sessions(db, user.id))
+    """Return given amount of training sessions belonging to the authenticated user."""
+    try:
+        summaries = await service.get_my_session_summaries(
+            db, user.id, page=page, page_size=page_size
+        )
+        return TrainingSessionSummaryList(sessions=summaries)
+    except service.PaginationException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 @router.post('/',
     status_code=status.HTTP_201_CREATED,
@@ -56,7 +64,7 @@ async def create_session(
 
 @router.get('/{session_id}',
     status_code=status.HTTP_200_OK,
-    response_model=GetTrainingSessionWithQuestionsResponse
+    response_model=TrainingSessionWithQuestion
 )
 async def get_single_session(session: TrainingSession = Depends(get_session_with_questions)):
     return session

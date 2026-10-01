@@ -18,13 +18,20 @@ class TrainingSessionInfo(TrainingSessionBase):
     id: int
     session_status: SessionStatus
     started_at: datetime
+    last_accessed_at: datetime | None
     completed_at: datetime | None
 
 class TrainingSessionCreateResponse(TrainingSessionInfo):
     pass
 
-class GetTrainingSessionWithQuestionsResponse(TrainingSessionInfo):
+class TrainingSessionWithQuestion(TrainingSessionInfo):
     training_questions: list[ViewTrainingQuestion]
 
-class GetAllTrainingSessionsResponse(BaseModel):
-    sessions: list[TrainingSessionInfo]
+class TrainingSessionSummary(BaseModel):
+    session: TrainingSessionInfo
+    answered_count: int
+    correct_count: int
+    accuracy: float
+
+class TrainingSessionSummaryList(BaseModel):
+    sessions: list[TrainingSessionSummary]

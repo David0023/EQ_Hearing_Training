@@ -1,6 +1,7 @@
 from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 from training.session.model import TrainingSession
 
 async def get_one(
@@ -15,9 +16,26 @@ async def get_one(
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
-async def get_many(db: AsyncSession, *conditions) -> list[TrainingSession]:
-    """Return all training sessions matching the given model fields."""
-    query = select(TrainingSession).where(*conditions)
+async def get_many(
+    db: AsyncSession, *conditions,
+    skip: int = 0,
+    limit: int = 20,
+    order_by: tuple[ColumnElement, ...] | None = None,
+) -> list[TrainingSession]:
+    """Return given amount of training sessions matching the given model fields."""
+    ordering = (
+        order_by
+        if order_by is not None
+        else (TrainingSession.id.desc(),)
+    )
+
+    query = (
+        select(TrainingSession)
+        .where(*conditions)
+        .order_by(*ordering)
+        .offset(skip)
+        .limit(limit)
+    )
     result = await db.execute(query)
     return result.scalars().all()
 
@@ -46,7 +64,8 @@ async def update(
     """
     allowed_fields = {
         "completed_at",
-        "session_status"
+        "session_status",
+        "last_accessed_at"
     }
 
     invalid_fields = set(kwargs) - allowed_fields

@@ -5,7 +5,11 @@ from training.session.model import TrainingSession
 from training.session import repository
 from training.domain.info import validate_frequency, validate_gain
 
-from training.session.schema import TrainingSessionCreateRequest
+from training.session.schema import (
+    TrainingSessionCreateRequest,
+    TrainingSessionSummary,
+)
+from training.question import repository as question_repository
 
 class SessionCreationException(Exception):
     pass
@@ -13,8 +17,53 @@ class SessionCreationException(Exception):
 class SessionDeletionException(Exception):
     pass
 
-async def get_all_my_sessions(db: AsyncSession, user_id: int) -> list[TrainingSession]:
-    return await repository.get_many(db, TrainingSession.user_id==user_id)
+class PaginationException(Exception):
+    pass
+
+async def get_my_sessions(
+    db: AsyncSession, user_id: int,
+    page: int = 1,
+    page_size: int = 20,
+) -> list[TrainingSession]:
+    if page <= 0:
+        raise PaginationException("Page number must be positive")
+    if page_size <= 0:
+            raise PaginationException("Page size must be positive")
+    return await repository.get_many(
+        db, TrainingSession.user_id==user_id,
+        skip=(page-1)*page_size,
+        limit=page_size,
+        order_by=(
+            TrainingSession.last_accessed_at.desc(),
+            TrainingSession.id.desc(),
+        ),
+    )
+
+async def get_my_session_summaries(
+    db: AsyncSession,
+    user_id: int,
+    page: int = 1,
+    page_size: int = 20,
+) -> list[TrainingSessionSummary]:
+    """Return a page of a user's sessions with aggregated question statistics."""
+    sessions = await get_my_sessions(db, user_id, page=page, page_size=page_size)
+    stats_by_session = await question_repository.get_session_statistics(
+        db, [session.id for session in sessions]
+    )
+
+    summaries = []
+    for session in sessions:
+        answered, correct = stats_by_session.get(session.id, (0, 0))
+        summaries.append(
+            TrainingSessionSummary(
+                session=session,
+                answered_count=answered,
+                correct_count=correct,
+                accuracy=round(correct / answered * 100) if answered else 0,
+            )
+        )
+    return summaries
+
 
 async def get_session(
     db: AsyncSession, *,
@@ -83,4 +132,12 @@ async def mark_session_complete(
         db, session, flush=True,
         session_status=SessionStatus.COMPLETED, completed_at=datetime.now(timezone.utc)
     )
+    return session
+
+async def update_timestamp(db: AsyncSession, session: TrainingSession):
+    """Update session accessed time. No commit"""
+    session = await repository.update(
+            db, session, flush=True,
+            last_accessed_at=datetime.now(timezone.utc)
+        )
     return session
