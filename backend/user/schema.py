@@ -20,3 +20,6 @@ class UserMeResponse(UserBaseModel):
     created_at: datetime
     updated_at: datetime
 
+class UserSelfAuthenticationRequest(BaseModel):
+    password: str
+
