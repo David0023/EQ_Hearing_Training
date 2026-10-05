@@ -49,3 +49,9 @@ async def headers(client):
     })
     assert response.status_code == 200, response.text
     return {'Authorization': f'Bearer {response.json()["access_token"]}'}
+
+@pytest.fixture
+async def db_session(client):
+    from db.database import SessionLocal
+    async with SessionLocal() as db:
+        yield db

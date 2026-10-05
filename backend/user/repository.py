@@ -2,9 +2,6 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from user.model import User
 
-class UserCreationException(Exception):
-    pass
-
 async def get_one(db: AsyncSession, *conditions) -> User | None:
     """Return the first user matching the SQLAlchemy conditions."""
     query = select(User).where(*conditions).order_by(User.id.asc())
@@ -16,7 +13,8 @@ async def create(
     db: AsyncSession,
     email: str,
     username: str,
-    hashed_pwd: str
+    hashed_pwd: str,
+    flush: bool = False,
 ) -> User:
     """Persist and return a user.
 
@@ -29,13 +27,10 @@ async def create(
         hashed_pwd=hashed_pwd
     )
     db.add(new_user)
-    try:
-        await db.commit()
+    if flush:
+        await db.flush()
         await db.refresh(new_user)
-        return new_user
-    except Exception as e:
-        await db.rollback()
-        raise UserCreationException(e)
+    return new_user
 
 async def update(
     db: AsyncSession,

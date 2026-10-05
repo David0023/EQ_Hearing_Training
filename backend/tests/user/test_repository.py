@@ -1,15 +1,21 @@
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from user import repository as user_repository
 
 pytestmark = pytest.mark.anyio
 
 
-async def test_user_creation_failure_rolls_back(client, headers):
-    from db.database import SessionLocal
-    async with SessionLocal() as db:
-        with pytest.raises(user_repository.UserCreationException):
-            await user_repository.create(db, 'tester@example.com', 'duplicate', 'hash')
-        # The same session must be usable after the failed commit.
-        created = await user_repository.create(db, 'fresh@example.com', 'fresh', 'hash')
-        assert created.id is not None
+async def test_user_creation_repository(headers, db_session):
+    # DB Constraint will raise Integrity Error for duplicate email.
+    with pytest.raises(IntegrityError):
+        await user_repository.create(
+            db_session, 'tester@example.com', 'duplicate', 'hash', flush=True
+        )
+
+    await db_session.rollback()
+    created = await user_repository.create(
+        db_session, 'fresh@example.com', 'fresh', 'hash', flush=True
+    )
+    await db_session.commit()
+    assert created.id is not None

@@ -22,7 +22,12 @@ async def test_auth_and_account_deletion(client, headers):
     assert duplicate.status_code == 400
     sid = await create_session(client, headers)
     assert (await client.post(f'{BASE}/sessions/{sid}/questions', headers=headers)).status_code == 201
-    response = await client.delete('/api/v1/users/me', headers=headers)
+    response = await client.request(
+        'DELETE',
+        '/api/v1/users/me',
+        headers=headers,
+        json={'password': 'test-password'},
+    )
     assert response.status_code == 204 and not response.content
     assert (await client.get('/api/v1/users/me', headers=headers)).status_code == 401
     async with database.SessionLocal() as db:
