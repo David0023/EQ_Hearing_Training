@@ -16,6 +16,8 @@ async def register(user_data: UserCreateRequest, db: AsyncSession = Depends(get_
         return await service.register(db, user_data)
     except service.UserCreationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except service.EmailAlreadyExists as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

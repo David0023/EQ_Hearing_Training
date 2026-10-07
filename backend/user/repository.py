@@ -17,9 +17,6 @@ async def create(
     flush: bool = False,
 ) -> User:
     """Persist and return a user.
-
-    Raises:
-        UserCreationException: If persisting the user fails.
     """
     new_user = User(
         email=email,

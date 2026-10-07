@@ -19,7 +19,7 @@ async def test_auth_and_account_deletion(client, headers):
     duplicate = await client.post('/auth/register', json={
         'username': 'tester', 'email': 'tester@example.com', 'password': 'test-password',
     })
-    assert duplicate.status_code == 400
+    assert duplicate.status_code == 409 
     sid = await create_session(client, headers)
     assert (await client.post(f'{BASE}/sessions/{sid}/questions', headers=headers)).status_code == 201
     response = await client.request(
