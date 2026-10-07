@@ -25,8 +25,8 @@ async def delete_me(
     """Delete the authenticated user."""
     try:
         await service.delete_user(request, db, current_user)
-    except service.DeleteUserException as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except service.UserUnauthenticated as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except Exception:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

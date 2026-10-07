@@ -32,3 +32,15 @@ async def test_auth_and_account_deletion(client, headers):
     assert (await client.get('/api/v1/users/me', headers=headers)).status_code == 401
     async with database.SessionLocal() as db:
         assert await session_repository.get_many(db) == []
+
+
+async def test_account_deletion_requires_correct_password(client, headers):
+    response = await client.request(
+        'DELETE', '/api/v1/users/me', headers=headers,
+        json={'password': 'incorrect-password'},
+    )
+    assert response.status_code == 401, response.text
+
+    # A rejected deletion must leave the account and its token usable.
+    profile = await client.get('/api/v1/users/me', headers=headers)
+    assert profile.status_code == 200, profile.text

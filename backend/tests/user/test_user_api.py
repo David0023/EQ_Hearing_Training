@@ -27,9 +27,9 @@ async def test_user_creation(client):
         for _ in range(10)
     ])
 
-    codes = {}
-    for response in responses:
-        code = response.status_code
-        codes[code] = 1 if code not in codes else codes[code] + 1
-    assert codes.get(409, None), codes.get(409, None) == 9
-    assert codes.get(201, None), codes.get(201, None) == 1
+    status_codes = {response.status_code for response in responses}
+    status_counts = {
+        code: sum(response.status_code == code for response in responses)
+        for code in status_codes
+    }
+    assert status_counts == {201: 1, 409: 9}, [r.text for r in responses]
