@@ -73,16 +73,36 @@ Set `SECRET_KEY` and `DATABASE_URL` in the environment before starting the app.
 
 ## Backend tests
 
-Run from the repository root:
+### Docker
+
+Run from the repository root. This builds a test image and starts an isolated
+PostgreSQL test database; Python, pytest, and PostgreSQL do not need to be installed
+on the host:
+
+```bash
+docker compose run --build --rm test
+```
+
+The test services use the `test` profile, so the regular `docker compose up`
+application stack is unaffected. The test database is separate from the app's
+`db` service and is not published to the host.
+
+### Local Python
+
+If you prefer to run pytest outside Docker, use a dedicated PostgreSQL test DB:
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r backend/requirements-dev.txt
-.venv/bin/python -m pytest -q
+createdb eq_hearing_test
+TEST_DATABASE_URL='postgresql+asyncpg://postgres:postgres@localhost:5432/eq_hearing_test' \
+  .venv/bin/python -m pytest -q
 ```
 
-Tests start the app against a temporary SQLite database with foreign keys enabled.
-They cover authentication, session/question workflows, ownership checks, response
-serialization, deletion cascades, and rollback. Email deliverability checks are
-stubbed to avoid DNS dependency. PostgreSQL row-lock concurrency requires a separate
-PostgreSQL integration environment; SQLite tests do not validate that behavior.
+The test suite requires `TEST_DATABASE_URL` to point to a dedicated PostgreSQL
+database whose name includes `test`; SQLite is not supported. Each test gets a
+unique schema that is dropped after the test, so the test role must be allowed to
+create and drop schemas. Tests cover authentication, session/question workflows,
+ownership checks, response serialization, deletion cascades, rollback, and
+PostgreSQL row-lock concurrency. Email deliverability checks are stubbed to avoid
+DNS dependency.

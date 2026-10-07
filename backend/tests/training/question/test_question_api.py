@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock
+import asyncio
 
 import pytest
 
@@ -51,3 +52,38 @@ async def test_question_must_belong_to_session(client, headers):
     response = await client.put(f'{BASE}/sessions/{second}/questions/{question["id"]}', headers=headers,
                                 json={'user_frequency': 125, 'user_gain': 3})
     assert response.status_code == 404
+
+
+async def test_concurrent_duplicate_answers_are_rejected(client, headers):
+    """Only one request may transition a question from unanswered to answered."""
+    from tests.training.helpers import SETTINGS
+
+    # Create Session: 201
+    response = await client.post(
+        f'{BASE}/sessions', headers=headers,
+        json=SETTINGS | {'num_questions': 1},
+    )
+    assert response.status_code == 201, response.text
+    session_id = response.json()['id']
+
+    # Start new question: 201
+    response = await client.post(
+        f'{BASE}/sessions/{session_id}/questions', headers=headers,
+    )
+    assert response.status_code == 201, response.text
+    question = response.json()['question']
+    url = f'{BASE}/sessions/{session_id}/questions/{question["id"]}'
+    payload = {
+        'user_frequency': question['target_frequency'],
+        'user_gain': question['target_gain'],
+    }
+
+    # Answer same question at the same time: 200 and 400
+    responses = await asyncio.gather(*[
+        client.put(url, headers=headers, json=payload) for _ in range(2)
+    ], return_exceptions=True)
+
+    assert not any(isinstance(response, Exception) for response in responses), responses
+    assert sorted(response.status_code for response in responses) == [200, 400], [
+        getattr(response, 'text', repr(response)) for response in responses
+    ]

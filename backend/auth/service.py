@@ -23,7 +23,13 @@ def is_email_unique_violation(exc: IntegrityError) -> bool:
     if constraint_name == "uq_users_email":
         return True
 
-    return "UNIQUE constraint failed: users.email" in str(original)
+    # PostgreSQL drivers do not all expose constraint_name on the same object.
+    # The server error message still includes the named constraint.
+    original_message = str(original)
+    return (
+        '"uq_users_email"' in original_message
+        or "UNIQUE constraint failed: users.email" in original_message
+    )
 
 async def register(db: AsyncSession, user_data: UserCreateRequest) -> User:
     is_valid_email, normalised_email = check_email(user_data.email)
@@ -47,6 +53,7 @@ async def register(db: AsyncSession, user_data: UserCreateRequest) -> User:
         await db.rollback()
         if is_email_unique_violation(exc):
             raise EmailAlreadyExists("Existing Email") from exc
+        raise
     except Exception as e:
         # Any unknown errors.
         await db.rollback()

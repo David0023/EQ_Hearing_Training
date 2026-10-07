@@ -35,7 +35,11 @@ async def start_question_or_continue(
     return GetTrainingQuestionResponse(question=question, question_type=session.question_type)
 
 
-@router.put("/{session_id}/questions/{question_id}", response_model=ViewTrainingQuestion)
+@router.put(
+    "/{session_id}/questions/{question_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=ViewTrainingQuestion
+)
 async def answer_question(
     question_id: int, form: AnswerQuestionRequest,
     db: AsyncSession = Depends(get_db),
