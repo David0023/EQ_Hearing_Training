@@ -16,6 +16,8 @@ async def test_routes_and_metadata(client):
         '/',
         '/auth/register',
         '/auth/login',
+        '/auth/refresh',
+        '/auth/logout',
         '/api/v1/users/me',
         '/api/v1/training/sessions/recent',
         '/api/v1/training/sessions',
@@ -38,6 +40,6 @@ async def test_routes_and_metadata(client):
         sys.executable, '-c',
         'from db.database import Base; from sqlalchemy.orm import configure_mappers; '
         'configure_mappers(); '
-        'assert set(Base.metadata.tables) == {"users", "training_sessions", "training_questions"}',
+        'assert set(Base.metadata.tables) == {"users", "training_sessions", "training_questions", "refresh_tokens"}',
     ], cwd=Path(__file__).resolve().parents[2], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr

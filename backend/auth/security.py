@@ -1,11 +1,12 @@
 import jwt
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, ValidationError
 from fastapi import HTTPException, status
 from pwdlib import PasswordHash
 
 from core.config import settings
-
 
 credentials_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -34,7 +35,6 @@ def create_access_token(
     }
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-
 def decode_token(token: str) -> TokenData:
     """Decode a token and return its validated token data.
 
@@ -60,6 +60,27 @@ def decode_token(token: str) -> TokenData:
     except ValidationError:
         raise credentials_exception
 
+# Refresh Token
+class RefreshTokenInfo(BaseModel):
+    raw_token: str
+    token_hash: str
+    expires_at: datetime
+
+def hash_refresh_token(raw_token: str) -> str:
+    return hashlib.sha256(
+        raw_token.encode()
+    ).hexdigest()
+
+def generate_refresh_token() -> RefreshTokenInfo:
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hash_refresh_token(raw_token)
+
+    token = RefreshTokenInfo(
+        raw_token=raw_token,
+        token_hash=token_hash,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+    )
+    return token
 
 # Password
 # Define password hashing scheme

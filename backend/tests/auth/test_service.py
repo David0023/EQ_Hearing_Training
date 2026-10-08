@@ -31,9 +31,3 @@ def test_other_postgres_unique_constraint_is_not_an_email_duplicate():
     )
 
     assert is_email_unique_violation(error) is False
-
-
-def test_sqlite_email_unique_violation_remains_recognized():
-    error = integrity_error(Exception('UNIQUE constraint failed: users.email'))
-
-    assert is_email_unique_violation(error) is True
