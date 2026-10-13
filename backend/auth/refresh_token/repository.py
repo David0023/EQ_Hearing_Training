@@ -19,12 +19,14 @@ async def create(
     db: AsyncSession,
     user_id: int,
     token_hash: str,
+    created_at: datetime,
     expires_at: datetime,
 ) -> RefreshToken:
     """Add and flush a refresh-token row."""
     new_token = RefreshToken(
         user_id=user_id,
         token_hash=token_hash,
+        created_at=created_at,
         expires_at=expires_at
     )
     db.add(new_token)

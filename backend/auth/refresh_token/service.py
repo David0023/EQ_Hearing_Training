@@ -39,12 +39,14 @@ async def create(
     db: AsyncSession,
     user_id: int,
     token_hash: str,
+    created_at: datetime,
     expires_at: datetime,
 ) -> RefreshToken:
     try:
         token = await repository.create(db,
             user_id=user_id,
             token_hash=token_hash,
+            created_at=created_at,
             expires_at=expires_at,
         )
         return token

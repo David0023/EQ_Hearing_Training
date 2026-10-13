@@ -14,7 +14,7 @@ credentials_exception = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
-class TokenData(BaseModel):
+class AccessTokenData(BaseModel):
     sub: str
     exp: int
     iat: int
@@ -35,7 +35,7 @@ def create_access_token(
     }
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-def decode_token(token: str) -> TokenData:
+def decode_token(token: str) -> AccessTokenData:
     """Decode a token and return its validated token data.
 
     Raises:
@@ -43,7 +43,7 @@ def decode_token(token: str) -> TokenData:
     """
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        return TokenData(
+        return AccessTokenData(
             sub=str(payload["sub"]),
             exp=int(payload["exp"]),
             iat=int(payload["iat"]),
@@ -64,6 +64,7 @@ def decode_token(token: str) -> TokenData:
 class RefreshTokenInfo(BaseModel):
     raw_token: str
     token_hash: str
+    created_at: datetime
     expires_at: datetime
 
 def hash_refresh_token(raw_token: str) -> str:
@@ -78,6 +79,7 @@ def generate_refresh_token() -> RefreshTokenInfo:
     token = RefreshTokenInfo(
         raw_token=raw_token,
         token_hash=token_hash,
+        created_at=datetime.now(timezone.utc),
         expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
     )
     return token

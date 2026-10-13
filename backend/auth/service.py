@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from auth import security
@@ -33,6 +34,7 @@ async def _store_refresh_token(
         db,
         user_id=user_id,
         token_hash=refresh_token.token_hash,
+        created_at=refresh_token.created_at,
         expires_at=refresh_token.expires_at,
     )
     return refresh_token
@@ -102,8 +104,12 @@ async def register(db: AsyncSession, user_data: UserCreateRequest) -> User:
         await db.rollback()
         raise
 
-        
-async def login(db: AsyncSession, email: str, password: str) -> dict[str, str]:
+@dataclass
+class Tokens:
+    access_token: str
+    refresh_token: security.RefreshTokenInfo
+
+async def login(db: AsyncSession, email: str, password: str) -> Tokens:
     async with db.begin():
         # Login via email
         existing_user = await user_repo.get_one(db, User.email==email)
@@ -113,11 +119,10 @@ async def login(db: AsyncSession, email: str, password: str) -> dict[str, str]:
         access_token = security.create_access_token(existing_user.id, role="user")
         refresh_token = await _store_refresh_token_with_retry(db, existing_user.id)
         
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "refresh_token": refresh_token.raw_token
-        }
+        return Tokens(
+            access_token= access_token,
+            refresh_token=refresh_token
+        )
 
 async def revoke_refresh_token(db: AsyncSession, raw_token: str, user_id: int) -> None:
     try:
@@ -135,7 +140,7 @@ async def revoke_refresh_token(db: AsyncSession, raw_token: str, user_id: int) -
         await db.rollback()
         raise
 
-async def refresh(db: AsyncSession, raw_token: str) -> dict[str, str]:
+async def refresh(db: AsyncSession, raw_token: str) -> Tokens:
     try:
         old_token = await refresh_token_service.get_valid(
             db, security.hash_refresh_token(raw_token)
@@ -144,11 +149,7 @@ async def refresh(db: AsyncSession, raw_token: str) -> dict[str, str]:
         new_refresh_token = await _store_refresh_token_with_retry(db, old_token.user_id)
         await refresh_token_service.revoke(db, old_token)
         await db.commit()
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "refresh_token": new_refresh_token.raw_token,
-        }
+        return Tokens(access_token=access_token, refresh_token=new_refresh_token)
     except (refresh_token_service.TokenRevoked,
             refresh_token_service.TokenNotFound,
             refresh_token_service.TokenExpired) as exc:
