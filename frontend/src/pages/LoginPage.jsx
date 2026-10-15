@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { useAuth } from '../auth/AuthContext'
 
 export function LoginInput() {
@@ -50,4 +51,15 @@ export function LoginInput() {
         {message && <p role='status'>{message}</p>}
         {error && <p role='alert'>{error}</p>}
     </>)
+}
+
+export function LoginPage() {
+    return (
+        <>
+            <div className='login-input-container'>
+                <LoginInput/>
+            </div>
+            <Link to='/login/signup'>Sign Up</Link>
+        </>
+    )
 }

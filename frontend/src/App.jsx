@@ -1,17 +1,21 @@
-import { Routes, Route } from 'react-router'
+import { Routes, Route, Link } from 'react-router'
 import './App.css'
-import { LoginInput } from './components/LoginInput'
-import { SignupInput } from './components/SignUpInput'
+import { LoginPage } from './pages/LoginPage'
+import { SignupPage } from './pages/SignUpPage'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { useAuth } from './auth/AuthContext'
 
 function HomePage() {
-  const { logout } = useAuth()
+  const { logout, isAuthenticated } = useAuth()
 
   return (
     <>
       <h1>Home Page</h1>
-      <button onClick={logout}>Log out</button>
+      {
+        isAuthenticated
+        ? <button onClick={logout}>Log out</button>
+        : <Link to='/login'>Login</Link>
+      }
     </>
   )
 }
@@ -19,9 +23,9 @@ function HomePage() {
 function App() {
   return (
     <Routes>
-      <Route index element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-      <Route path="login" element={<LoginInput />} />
-      <Route path="signup" element={<SignupInput/>} />
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login/signup" element={<SignupPage/>} />
     </Routes>
   )
 }

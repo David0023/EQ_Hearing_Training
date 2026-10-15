@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { signup } from '../api/auth'
 
 
@@ -60,4 +61,16 @@ export function SignupInput() {
         {message && <p role='status'>{message}</p>}
         {error && <p role='alert'>{error}</p>}
     </>)
+}
+
+
+export function SignupPage() {
+    return (
+        <>
+            <div className='singup-input-container'>
+                <SignupInput/>
+            </div>
+            <Link to='/login'>Login</Link>
+        </>
+    )
 }
