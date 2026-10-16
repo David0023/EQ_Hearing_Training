@@ -62,8 +62,32 @@ async def register_and_login(client, email='tester@example.com', username='teste
         'username': email, 'password': 'test-password',
     })
     assert response.status_code == 200, response.text
-    return response.json()
+    return response
 
+def get_refresh_token(response) -> str:
+    assert response.headers['cache-control'] == 'no-store'
+    assert response.headers['pragma'] == 'no-cache'
+    set_cookie = response.headers.get_list("set-cookie")
+
+    refresh_cookie = next(
+        (cookie for cookie in set_cookie
+         if cookie.startswith("refresh_token=")), None
+    )
+    assert refresh_cookie is not None
+
+    assert "httponly" in refresh_cookie.lower()
+    assert "secure" in refresh_cookie.lower()
+    assert "samesite=lax" in refresh_cookie.lower()
+    assert "path=/auth" in refresh_cookie.lower()
+
+    refresh_token = response.cookies.get('refresh_token')
+    assert refresh_token is not None
+    return refresh_token
+
+def get_access_token(response) -> str:
+    access_token = response.json()['access_token']
+    assert access_token is not None
+    return access_token
 
 async def test_login_issues_distinct_refresh_tokens_without_caching(client):
     """Each login creates an independent, non-cacheable refresh credential."""
@@ -71,53 +95,53 @@ async def test_login_issues_distinct_refresh_tokens_without_caching(client):
     second = (await client.post('/auth/login', data={
         'username': 'tester@example.com', 'password': 'test-password',
     }))
-
     assert second.status_code == 200, second.text
-    assert first['refresh_token'] != second.json()['refresh_token']
-    assert second.headers['cache-control'] == 'no-store'
-    assert second.headers['pragma'] == 'no-cache'
+
+    # Check cookie
+    first_cookie = get_refresh_token(first)
+    second_cookie = get_refresh_token(second)
+
+    assert first_cookie != second_cookie
 
 
 async def test_refresh_rotates_token_and_rejects_previous_token(client):
     """A successful refresh returns a fresh pair and consumes the old refresh token."""
-    tokens = await register_and_login(client)
+    response_1 = await register_and_login(client)
+    old_token = get_refresh_token(response_1)
 
-    response = await client.post('/auth/refresh', json={
-        'refresh_token': tokens['refresh_token'],
-    })
+    response_2 = await client.post(
+        '/auth/refresh', cookies={'refresh_token': old_token},
+    )
+    assert response_2.status_code == 200, response_2.text
 
-    assert response.status_code == 200, response.text
-    rotated = response.json()
-    assert rotated['refresh_token'] != tokens['refresh_token']
-    assert response.headers['cache-control'] == 'no-store'
-    assert response.headers['pragma'] == 'no-cache'
-    replay = await client.post('/auth/refresh', json={
-        'refresh_token': tokens['refresh_token'],
+    rotated_token = get_refresh_token(response_2)
+    assert rotated_token != old_token
+    replay = await client.post('/auth/refresh', cookies={
+        'refresh_token': old_token,
     })
     assert replay.status_code == 401
 
 
 async def test_refresh_tokens_are_stored_as_hashes(client, db_session):
     """The database keeps only the hash, never the bearer secret."""
-    tokens = await register_and_login(client)
+    token = get_refresh_token(await register_and_login(client))
     stored = await db_session.scalar(select(RefreshToken))
 
     assert stored is not None
-    assert stored.token_hash == security.hash_refresh_token(tokens['refresh_token'])
-    assert stored.token_hash != tokens['refresh_token']
-
+    assert stored.token_hash == security.hash_refresh_token(token)
+    assert stored.token_hash != token
 
 async def test_expired_and_unknown_refresh_tokens_are_rejected(client, db_session):
     """Expired and unrecognized credentials both fail as unauthorized."""
-    tokens = await register_and_login(client)
+    refresh_token = get_refresh_token(await register_and_login(client))
     stored = await db_session.scalar(select(RefreshToken))
     stored.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
     await db_session.commit()
 
-    expired = await client.post('/auth/refresh', json={
-        'refresh_token': tokens['refresh_token'],
-    })
-    unknown = await client.post('/auth/refresh', json={'refresh_token': 'not-a-token'})
+    expired = await client.post(
+        '/auth/refresh', cookies={'refresh_token': refresh_token},
+    )
+    unknown = await client.post('/auth/refresh', cookies={'refresh_token': 'not-a-token'})
 
     assert expired.status_code == 401
     assert unknown.status_code == 401
@@ -125,16 +149,17 @@ async def test_expired_and_unknown_refresh_tokens_are_rejected(client, db_sessio
 
 async def test_logout_revokes_owned_refresh_token(client):
     """Logout revokes the supplied token and prevents a later refresh."""
-    tokens = await register_and_login(client)
-    headers = {'Authorization': f"Bearer {tokens['access_token']}"}
+    response = await register_and_login(client)
+    headers = {'Authorization': f"Bearer {get_access_token(response)}"}
 
-    response = await client.post('/auth/logout', headers=headers, json={
-        'refresh_token': tokens['refresh_token'],
-    })
+    response2 = await client.post(
+        '/auth/logout', headers=headers,
+        cookies={'refresh_token': get_refresh_token(response)},
+    )
 
-    assert response.status_code == 204
-    refresh = await client.post('/auth/refresh', json={
-        'refresh_token': tokens['refresh_token'],
+    assert response2.status_code == 204
+    refresh = await client.post('/auth/refresh', cookies={
+        'refresh_token': get_refresh_token(response),
     })
     assert refresh.status_code == 401
 
@@ -145,23 +170,27 @@ async def test_logout_cannot_revoke_another_users_refresh_token(client):
     second = await register_and_login(
         client, email='other@example.com', username='other',
     )
-    headers = {'Authorization': f"Bearer {first['access_token']}"}
+    first_token = get_access_token(first)
+    second_refresh_token = get_refresh_token(second)
+    headers = {'Authorization': f"Bearer {first_token}"}
 
-    response = await client.post('/auth/logout', headers=headers, json={
-        'refresh_token': second['refresh_token'],
-    })
+    response = await client.post(
+        '/auth/logout', headers=headers,
+        cookies={'refresh_token': second_refresh_token},
+    )
     assert response.status_code == 401
 
-    still_valid = await client.post('/auth/refresh', json={
-        'refresh_token': second['refresh_token'],
-    })
+    still_valid = await client.post(
+        '/auth/refresh', cookies={'refresh_token': second_refresh_token},
+    )
     assert still_valid.status_code == 200
 
 
 async def test_user_deletion_invalidates_access_and_refresh_tokens(client):
     """Deleting an account removes its refresh credentials and invalidates access."""
     tokens = await register_and_login(client)
-    headers = {'Authorization': f"Bearer {tokens['access_token']}"}
+    refresh_token = get_refresh_token(tokens)
+    headers = {'Authorization': f"Bearer {get_access_token(tokens)}"}
 
     deleted = await client.request(
         'DELETE', '/api/v1/users/me', headers=headers,
@@ -170,19 +199,19 @@ async def test_user_deletion_invalidates_access_and_refresh_tokens(client):
 
     assert deleted.status_code == 204
     assert (await client.get('/api/v1/users/me', headers=headers)).status_code == 401
-    assert (await client.post('/auth/refresh', json={
-        'refresh_token': tokens['refresh_token'],
-    })).status_code == 401
+    assert (await client.post(
+        '/auth/refresh', cookies={'refresh_token': refresh_token},
+    )).status_code == 401
 
 
 async def test_concurrent_refresh_allows_only_one_rotation(client):
     """PostgreSQL row locking lets exactly one request consume a refresh token."""
     tokens = await register_and_login(client)
-    payload = {'refresh_token': tokens['refresh_token']}
+    refresh_token = get_refresh_token(tokens)
 
     first, second = await asyncio.gather(
-        client.post('/auth/refresh', json=payload),
-        client.post('/auth/refresh', json=payload),
+        client.post('/auth/refresh', cookies={'refresh_token': refresh_token}),
+        client.post('/auth/refresh', cookies={'refresh_token': refresh_token}),
     )
 
     assert sorted([first.status_code, second.status_code]) == [200, 401]
