@@ -15,6 +15,20 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+  
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/postgres_db
+      SECRET_KEY: very_secure_key
+      PYTHONPATH: /app/backend
+    command: ["uv", "run", "--project", "backend", "--locked", "--no-sync", "alembic", "-c", "backend/alembic.ini", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
 
   backend:
     build:
@@ -24,11 +38,12 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/postgres_db
       SECRET_KEY: very_secure_key
+      PYTHONPATH: /app/backend
     ports:
       - "8000:8000"
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   db-test:
     profiles: ["test"]

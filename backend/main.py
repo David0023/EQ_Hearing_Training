@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from db.database import init_db
+from db.database import engine
 import uvicorn
 
 from core.config import settings
@@ -13,8 +13,8 @@ from api.v1.router import router as v1_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize the database when the application starts."""
-    await init_db()
     yield
+    await engine.dispose()
 
 app = FastAPI(lifespan=lifespan)
 
