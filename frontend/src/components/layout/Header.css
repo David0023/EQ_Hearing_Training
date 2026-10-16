@@ -1,0 +1,20 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+}
+
+.navbar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.navbar a {
+    text-decoration: none;
+}
+
+.navbar button {
+    cursor: pointer;
+}

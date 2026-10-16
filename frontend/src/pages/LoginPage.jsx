@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useAuth } from '../auth/AuthContext'
 
 export function LoginInput() {
@@ -9,6 +9,7 @@ export function LoginInput() {
     const [loggingIn, setLoggingIn] = useState(false)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
+    const navigate = useNavigate()
 
     async function tryLogin() {
         setLoggingIn(true)
@@ -17,6 +18,7 @@ export function LoginInput() {
         try {
             await login(email, password)
             setMessage('Logged in successfully.')
+            navigate('/')
         } catch (error) {
             setError(error.response?.data?.detail || error.message || 'Could not log in')
         } finally {

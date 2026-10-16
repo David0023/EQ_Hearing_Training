@@ -4,18 +4,14 @@ import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignUpPage'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { useAuth } from './auth/AuthContext'
+import { Header } from './components/layout/Header'
 
 function HomePage() {
   const { logout, isAuthenticated } = useAuth()
 
   return (
     <>
-      <h1>Home Page</h1>
-      {
-        isAuthenticated
-        ? <button onClick={logout}>Log out</button>
-        : <Link to='/login'>Login</Link>
-      }
+      <Header />
     </>
   )
 }
