@@ -54,7 +54,7 @@ services:
     depends_on:
       db-test:
         condition: service_healthy
-    command: ["python", "-m", "pytest", "-q"]
+    command: ["uv", "run", "--project", "backend", "--locked", "--group", "dev", "python", "-m", "pytest", "-q"]
 
 volumes:
   db_data:

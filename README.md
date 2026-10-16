@@ -63,10 +63,12 @@ must hold the session lock until a question is created or answered.
 Existing public URLs are preserved: `/auth/*`, `/api/vi/training/*`, and
 `/api/vi/infos/*`. The existing `vi` prefix is intentional for compatibility.
 Python imports use `backend/` as the application root, matching the Docker working
-directory. For local execution from the repository root:
+directory. Install the project environment with `uv` from `backend/`:
 
 ```bash
-uvicorn main:app --app-dir backend
+cd backend
+uv sync --locked
+uv run uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 Set `SECRET_KEY` and `DATABASE_URL` in the environment before starting the app.
@@ -92,11 +94,11 @@ application stack is unaffected. The test database is separate from the app's
 If you prefer to run pytest outside Docker, use a dedicated PostgreSQL test DB:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r backend/requirements-dev.txt
+cd backend
+uv sync --locked --group dev
 createdb eq_hearing_test
 TEST_DATABASE_URL='postgresql+asyncpg://postgres:postgres@localhost:5432/eq_hearing_test' \
-  .venv/bin/python -m pytest -q
+  uv run --locked --group dev python -m pytest -q
 ```
 
 The test suite requires `TEST_DATABASE_URL` to point to a dedicated PostgreSQL
