@@ -1,4 +1,4 @@
-import { privateApi, publicApi } from './client'
+import { privateApi, publicApi } from '../../../api/client'
 
 let refreshPromise
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../AuthContext'
+import { Header } from '../../../components/layout/Header'
 
 export function LoginInput() {
     const { login } = useAuth()
@@ -58,6 +59,8 @@ export function LoginInput() {
 export function LoginPage() {
     return (
         <>
+            <Header/>
+            <h2>Login</h2>
             <div className='login-input-container'>
                 <LoginInput/>
             </div>

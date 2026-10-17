@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { signup } from '../api/auth'
+import { Header } from '../../../components/layout/Header'
 
 
 export function SignupInput() {
@@ -67,6 +68,8 @@ export function SignupInput() {
 export function SignupPage() {
     return (
         <>
+            <Header/>
+            <h2>Sign Up</h2>
             <div className='singup-input-container'>
                 <SignupInput/>
             </div>
