@@ -4,7 +4,7 @@ import { signup } from '../api/auth'
 import { Header } from '../../../components/layout/Header'
 
 
-export function SignupInput() {
+function SignupInput() {
     const [username, setUsername] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')

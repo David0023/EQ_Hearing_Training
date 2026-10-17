@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { useAuth } from '../AuthContext'
 import { Header } from '../../../components/layout/Header'
 
-export function LoginInput() {
+function LoginInput() {
     const { login } = useAuth()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
