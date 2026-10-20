@@ -1,9 +1,9 @@
 import { publicApi } from "../../../api/client";
 
-export function get_frequencies () {
+export function getFrequencies () {
     return publicApi.get('/api/v1/training/infos/frequency/groups')
 }
 
-export function get_gain_options () {
+export function getGainOptions () {
     return publicApi.get('/api/v1/training/infos/gain/options')
 }

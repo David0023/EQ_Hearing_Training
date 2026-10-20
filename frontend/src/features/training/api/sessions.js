@@ -1,6 +1,14 @@
 import { privateApi } from '../../../api/client'
 
-export function createTrainingSession(
+export function getRecentSessions(page=1, page_size=20) {
+    return privateApi.get('/api/v1/training/sessions/recent', {
+        params: {
+            page, page_size
+        }
+    })
+}
+
+export function createSession(
     isAuthenticated, numQuestions, questionType, minFreequency,
     maxFrequency, gainLevel
 ) {
@@ -13,4 +21,5 @@ export function createTrainingSession(
             'gain_level': gainLevel,
         })
     }
+    // TODO: For Guest users, do not create session in db but provide something else.
 }

@@ -1,4 +1,4 @@
-import { AudioUploader } from '../components/AudioUploader'
+import { TrainingSessionList  } from '../components/TrainingSessionList'
 import { Header } from '../../../components/layout/Header'
 
 export function TrainingPage() {
@@ -6,7 +6,7 @@ export function TrainingPage() {
         <>
             <Header />
             <h2>Training</h2>
-            <AudioUploader />
+            <TrainingSessionList />
         </>
     )
 }

@@ -1,10 +1,14 @@
 import { Header } from "../components/layout/Header"
+import { TrainingSessionList } from "../features/training/components/TrainingSessionList"
 
 export function HomePage() {
   return (
     <>
       <Header />
-      <h2>Home Page</h2>
+      <main>
+        <h1>EQ Hearing Training</h1>
+        <TrainingSessionList />
+      </main>
     </>
   )
 }

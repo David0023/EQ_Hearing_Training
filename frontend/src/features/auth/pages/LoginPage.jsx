@@ -64,7 +64,7 @@ export function LoginPage() {
             <div className='login-input-container'>
                 <LoginInput/>
             </div>
-            <Link to='/login/signup'>Sign Up</Link>
+            <Link to='/signup'>Sign Up</Link>
         </>
     )
 }
