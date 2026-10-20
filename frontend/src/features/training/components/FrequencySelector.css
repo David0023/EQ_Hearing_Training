@@ -1,0 +1,81 @@
+.frequency-selector {
+  width: min(100% - 2rem, var(--content-width));
+  margin: 1.5rem auto;
+  text-align: left;
+}
+
+.frequency-selector__summary {
+  margin-bottom: 1.5rem;
+  color: var(--color-brand);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.frequency-selector__groups {
+  display: grid;
+  gap: 1rem;
+}
+
+.frequency-selector__group {
+  min-width: 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.frequency-selector__group-title {
+  margin: 0 0 0.65rem;
+  padding: 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.frequency-selector__options {
+  display: flex;
+  align-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.frequency-selector__button {
+  min-width: 4.5rem;
+  min-height: 44px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #cbd6d2;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.frequency-selector__button:hover {
+  border-color: var(--color-brand-hover);
+  background: #f0f6f3;
+}
+
+.frequency-selector__button.is-in-range {
+  border-color: #a8cec0;
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.frequency-selector__button.is-endpoint {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: #fff;
+  font-weight: 650;
+}
+
+.frequency-selector__button:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frequency-selector__button {
+    transition: none;
+  }
+}

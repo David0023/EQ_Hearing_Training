@@ -9,6 +9,10 @@ function formatLabel(label) {
     .join(' ')
 }
 
+function formatHzNumber(frequency) {
+  return frequency > 1000 ? `${Math.trunc(frequency/1000)}k Hz`: `${frequency} Hz`
+}
+
 export function FrequencySelector({ setMinFrequency, setMaxFrequency }) {
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
@@ -86,10 +90,7 @@ export function FrequencySelector({ setMinFrequency, setMaxFrequency }) {
             : `${min} Hz to ${max} Hz`}
       </p>
 
-      <div
-        className="frequency-selector__groups"
-        style={{ '--frequency-group-count': Math.max(groups.length, 1) }}
-      >
+      <div className="frequency-selector__groups">
         {groups.map((group) => (
           <div className="frequency-selector__group" key={group.name}>
             <p className="frequency-selector__group-title">{formatLabel(group.name)}</p>
@@ -107,7 +108,7 @@ export function FrequencySelector({ setMinFrequency, setMaxFrequency }) {
                     aria-pressed={isEndpoint}
                     onClick={() => handleClick(frequency)}
                   >
-                    {frequency} Hz
+                    {formatHzNumber(frequency)}
                   </button>
                 )
               })}

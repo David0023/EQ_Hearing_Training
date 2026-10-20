@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { signup } from '../api/auth'
 import { Header } from '../../../components/layout/Header'
+import './AuthPages.css'
 
 
 function SignupInput() {
@@ -31,21 +32,21 @@ function SignupInput() {
 
     return (<>
         <input
-            className='signup-input'
+            className='auth-page__input'
             name='signup-username'
             placeholder='username'
             value={username}
             onChange={(e) => setUsername(e.target.value)}
         />
         <input
-            className='signup-input'
+            className='auth-page__input'
             name='signup-email'
             placeholder='example@domain.com'
             value={email}
             onChange={(e) => setEmail(e.target.value)}
         />
         <input
-            className='signup-input'
+            className='auth-page__input'
             name='signup-password'
             type='password'
             placeholder='********'
@@ -53,14 +54,14 @@ function SignupInput() {
             onChange={(e) => setPassword(e.target.value)}
         />
         <button
-            className='signup-button'
+            className='auth-page__submit'
             onClick={trySignup}
             disabled={isSigningUp || !username.trim() || !email.trim() || !password}
         >
             {isSigningUp ? 'Signing Up…' : 'Sign Up'}
         </button>
-        {message && <p role='status'>{message}</p>}
-        {error && <p role='alert'>{error}</p>}
+        {message && <p className='auth-page__notice' role='status'>{message}</p>}
+        {error && <p className='auth-page__notice' role='alert'>{error}</p>}
     </>)
 }
 
@@ -69,11 +70,11 @@ export function SignupPage() {
     return (
         <>
             <Header/>
-            <h2>Sign Up</h2>
-            <div className='singup-input-container'>
+            <h2 className='page-title'>Sign Up</h2>
+            <div className='auth-page__form'>
                 <SignupInput/>
             </div>
-            <Link to='/login'>Login</Link>
+            <Link className='auth-page__switch' to='/login'>Login</Link>
         </>
     )
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useAuth } from '../AuthContext'
 import { Header } from '../../../components/layout/Header'
+import './AuthPages.css'
 
 function LoginInput() {
     const { login } = useAuth()
@@ -30,14 +31,14 @@ function LoginInput() {
 
     return (<>
         <input
-            className='login-input'
+            className='auth-page__input'
             name='login-email'
             placeholder='example@domain.com'
             value={email}
             onChange={(e) => setEmail(e.target.value)}
         />
         <input
-            className='login-input'
+            className='auth-page__input'
             name='login-password'
             type='password'
             placeholder='********'
@@ -45,14 +46,14 @@ function LoginInput() {
             onChange={(e) => setPassword(e.target.value)}
         />
         <button
-            className='login-button'
+            className='auth-page__submit'
             onClick={() => tryLogin()}
             disabled={loggingIn || !email.trim() || !password}
         >
             {loggingIn ? "Logging In" : "Log in"}
         </button>
-        {message && <p role='status'>{message}</p>}
-        {error && <p role='alert'>{error}</p>}
+        {message && <p className='auth-page__notice' role='status'>{message}</p>}
+        {error && <p className='auth-page__notice' role='alert'>{error}</p>}
     </>)
 }
 
@@ -60,11 +61,11 @@ export function LoginPage() {
     return (
         <>
             <Header/>
-            <h2>Login</h2>
-            <div className='login-input-container'>
+            <h2 className='page-title'>Login</h2>
+            <div className='auth-page__form'>
                 <LoginInput/>
             </div>
-            <Link to='/signup'>Sign Up</Link>
+            <Link className='auth-page__switch' to='/signup'>Sign Up</Link>
         </>
     )
 }

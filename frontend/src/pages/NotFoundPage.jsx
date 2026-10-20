@@ -4,7 +4,7 @@ export function NotFoundPage() {
     return (
         <>
             <Header/>
-            <h2>Not Found</h2>
+            <h2 className="page-title">Not Found</h2>
         </>
     )
 }

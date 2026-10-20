@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "./AudioUploader.css";
 
 export function AudioUploader() {
   const [file, setFile] = useState(null);
@@ -38,14 +39,15 @@ export function AudioUploader() {
   }
 
   return (
-    <section>
-      <h2>EQ Training</h2>
+    <section className="audio-uploader">
+      <h2 className="audio-uploader__title">EQ Training</h2>
       <p>Select Audio file and play.</p>
 
-      <label htmlFor="audio-upload">
+      <label className="audio-uploader__label" htmlFor="audio-upload">
         Select Audio File
       </label>
       <input
+        className="audio-uploader__input"
         id="audio-upload"
         type="file"
         accept="audio/*"
@@ -53,15 +55,16 @@ export function AudioUploader() {
       />
 
       {file && (
-        <div>
-          <h3>Selected File</h3>
-          <p>{file.name}</p>
-          <p>
+        <div className="audio-uploader__file">
+          <h3 className="audio-uploader__file-title">Selected File</h3>
+          <p className="audio-uploader__file-name">{file.name}</p>
+          <p className="audio-uploader__file-size">
             {(file.size / (1024 * 1024)).toFixed(2)} MB
           </p>
 
           {audioUrl && (
             <audio
+              className="audio-uploader__audio"
               key={audioUrl}
               controls
               src={audioUrl}
@@ -71,8 +74,8 @@ export function AudioUploader() {
             </audio>
           )}
 
-          <div>
-            <button type="button" onClick={handleRemove}>
+          <div className="audio-uploader__actions">
+            <button className="audio-uploader__remove" type="button" onClick={handleRemove}>
               Remove File
             </button>
           </div>

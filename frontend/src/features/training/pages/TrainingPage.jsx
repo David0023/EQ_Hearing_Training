@@ -5,7 +5,7 @@ export function TrainingPage() {
     return (
         <>
             <Header />
-            <h2>Training</h2>
+            <h2 className="page-title">Training</h2>
             <TrainingSessionList />
         </>
     )
