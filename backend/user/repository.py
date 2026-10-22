@@ -44,6 +44,7 @@ async def update(
         "username",
         "email",
         "hashed_pwd",
+        "profile_img_key",
     }
     invalid_fields = set(kwargs) - allowed_fields
 

@@ -19,6 +19,7 @@ async def test_routes_and_metadata(client):
         '/auth/refresh',
         '/auth/logout',
         '/api/v1/users/me',
+        '/api/v1/users/profile/image',
         '/api/v1/training/sessions/recent',
         '/api/v1/training/sessions',
         '/api/v1/training/sessions/{session_id}',

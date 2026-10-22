@@ -1,5 +1,6 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings
+from pathlib import Path
 
 class Settings(BaseSettings):
     # DB Settings
@@ -13,4 +14,7 @@ class Settings(BaseSettings):
     FRONTEND_ORIGINS: list[str] = ["http://localhost:5173"]
     COOKIE_SECURE: bool = True
 
+    # Storage Settings
+    LOCAL_UPLOAD_DIR: Path = Path("uploads")
+    
 settings = Settings()

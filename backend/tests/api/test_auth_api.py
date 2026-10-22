@@ -89,6 +89,10 @@ def get_access_token(response) -> str:
     assert access_token is not None
     return access_token
 
+
+def refresh_cookie_header(token: str) -> dict[str, str]:
+    return {'Cookie': f'refresh_token={token}'}
+
 async def test_login_issues_distinct_refresh_tokens_without_caching(client):
     """Each login creates an independent, non-cacheable refresh credential."""
     first = await register_and_login(client)
@@ -110,15 +114,15 @@ async def test_refresh_rotates_token_and_rejects_previous_token(client):
     old_token = get_refresh_token(response_1)
 
     response_2 = await client.post(
-        '/auth/refresh', cookies={'refresh_token': old_token},
+        '/auth/refresh', headers=refresh_cookie_header(old_token),
     )
     assert response_2.status_code == 200, response_2.text
 
     rotated_token = get_refresh_token(response_2)
     assert rotated_token != old_token
-    replay = await client.post('/auth/refresh', cookies={
-        'refresh_token': old_token,
-    })
+    replay = await client.post(
+        '/auth/refresh', headers=refresh_cookie_header(old_token),
+    )
     assert replay.status_code == 401
 
 
@@ -139,9 +143,11 @@ async def test_expired_and_unknown_refresh_tokens_are_rejected(client, db_sessio
     await db_session.commit()
 
     expired = await client.post(
-        '/auth/refresh', cookies={'refresh_token': refresh_token},
+        '/auth/refresh', headers=refresh_cookie_header(refresh_token),
     )
-    unknown = await client.post('/auth/refresh', cookies={'refresh_token': 'not-a-token'})
+    unknown = await client.post(
+        '/auth/refresh', headers=refresh_cookie_header('not-a-token'),
+    )
 
     assert expired.status_code == 401
     assert unknown.status_code == 401
@@ -153,14 +159,15 @@ async def test_logout_revokes_owned_refresh_token(client):
     headers = {'Authorization': f"Bearer {get_access_token(response)}"}
 
     response2 = await client.post(
-        '/auth/logout', headers=headers,
-        cookies={'refresh_token': get_refresh_token(response)},
+        '/auth/logout',
+        headers={**headers, **refresh_cookie_header(get_refresh_token(response))},
     )
 
     assert response2.status_code == 204
-    refresh = await client.post('/auth/refresh', cookies={
-        'refresh_token': get_refresh_token(response),
-    })
+    refresh = await client.post(
+        '/auth/refresh',
+        headers=refresh_cookie_header(get_refresh_token(response)),
+    )
     assert refresh.status_code == 401
 
 
@@ -175,13 +182,13 @@ async def test_logout_cannot_revoke_another_users_refresh_token(client):
     headers = {'Authorization': f"Bearer {first_token}"}
 
     response = await client.post(
-        '/auth/logout', headers=headers,
-        cookies={'refresh_token': second_refresh_token},
+        '/auth/logout',
+        headers={**headers, **refresh_cookie_header(second_refresh_token)},
     )
     assert response.status_code == 401
 
     still_valid = await client.post(
-        '/auth/refresh', cookies={'refresh_token': second_refresh_token},
+        '/auth/refresh', headers=refresh_cookie_header(second_refresh_token),
     )
     assert still_valid.status_code == 200
 
@@ -200,7 +207,7 @@ async def test_user_deletion_invalidates_access_and_refresh_tokens(client):
     assert deleted.status_code == 204
     assert (await client.get('/api/v1/users/me', headers=headers)).status_code == 401
     assert (await client.post(
-        '/auth/refresh', cookies={'refresh_token': refresh_token},
+        '/auth/refresh', headers=refresh_cookie_header(refresh_token),
     )).status_code == 401
 
 
@@ -210,8 +217,12 @@ async def test_concurrent_refresh_allows_only_one_rotation(client):
     refresh_token = get_refresh_token(tokens)
 
     first, second = await asyncio.gather(
-        client.post('/auth/refresh', cookies={'refresh_token': refresh_token}),
-        client.post('/auth/refresh', cookies={'refresh_token': refresh_token}),
+        client.post(
+            '/auth/refresh', headers=refresh_cookie_header(refresh_token),
+        ),
+        client.post(
+            '/auth/refresh', headers=refresh_cookie_header(refresh_token),
+        ),
     )
 
     assert sorted([first.status_code, second.status_code]) == [200, 401]

@@ -14,12 +14,15 @@ class UserCreateResponse(UserBaseModel):
     created_at: datetime
     updated_at: datetime
 
-class UserMeResponse(UserBaseModel):
+class UserProfileResponse(UserBaseModel):
     id: int
     model_config = ConfigDict(from_attributes=True)
     created_at: datetime
     updated_at: datetime
+    profile_img_key: str | None
 
 class UserSelfAuthenticationRequest(BaseModel):
     password: str
 
+class UserProfileImageUploadResponse(BaseModel):
+    profile_image_key: str

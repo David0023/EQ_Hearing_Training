@@ -2,6 +2,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from typing import AsyncGenerator
 
 from core.config import settings
+from db import models as _models  # noqa: F401
+from db.base import Base
 
 
 # SQL Alchemy engine for postgresql

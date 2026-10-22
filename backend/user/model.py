@@ -12,6 +12,7 @@ class User(TimestampMixin, Base):
     email: Mapped[str] = mapped_column(index=True, nullable=False)
     username: Mapped[str] = mapped_column(String(255), nullable=False)
     hashed_pwd: Mapped[str] = mapped_column(String, nullable=True)
+    profile_img_key: Mapped[str] = mapped_column(String(255), nullable=True)
 
     training_sessions: Mapped[list["TrainingSession"]] = relationship(
         back_populates="user",

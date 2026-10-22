@@ -2,6 +2,8 @@ import os
 from uuid import uuid4
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
@@ -66,6 +68,15 @@ async def client(monkeypatch):
     monkeypatch.setattr('auth.service.check_email', lambda email: (True, email.lower()))
 
     try:
+        alembic_config = Config(os.path.join(os.path.dirname(__file__), '..', 'alembic.ini'))
+
+        def upgrade_schema(connection):
+            alembic_config.attributes['connection'] = connection
+            command.upgrade(alembic_config, 'head')
+
+        async with engine.begin() as connection:
+            await connection.run_sync(upgrade_schema)
+
         async with app.router.lifespan_context(app):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url='http://test'

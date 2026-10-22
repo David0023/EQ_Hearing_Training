@@ -34,13 +34,16 @@ services:
     build:
       context: .
       dockerfile: backend/dockerfile
-    container_name: docs_summary_backend
+    container_name: eq_hearing_training_backend
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/postgres_db
       SECRET_KEY: very_secure_key
       PYTHONPATH: /app/backend
+      LOCAL_UPLOAD_DIR: /app/uploads
     ports:
       - "8000:8000"
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -73,3 +76,4 @@ services:
 
 volumes:
   db_data:
+  uploads_data:
