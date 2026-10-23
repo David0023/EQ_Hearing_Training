@@ -13,14 +13,15 @@ from auth.dependencies import get_current_user
 from db.database import get_db
 from user.model import User
 from training.session.model import TrainingSession
-from training.dependencies import get_session_with_questions, get_locked_session
+from training.dependencies import get_session_with_questions, get_locked_session, get_session
 
 router = APIRouter(
     prefix='/sessions',
     tags=['session']
 )
 
-@router.get('/recent',
+@router.get(
+    '/recent',
     status_code=status.HTTP_200_OK,
     response_model=TrainingSessionSummaryList
 )
@@ -39,7 +40,8 @@ async def get_recent_sessions(
     except service.PaginationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
-@router.post('',
+@router.post(
+    '',
     status_code=status.HTTP_201_CREATED,
     response_model=TrainingSessionCreateResponse
 )
@@ -62,7 +64,8 @@ async def create_session(
     except service.SessionCreationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
-@router.get('/{session_id}',
+@router.get(
+    '/{session_id}',
     status_code=status.HTTP_200_OK,
     response_model=TrainingSessionWithQuestion
 )
@@ -70,7 +73,10 @@ async def get_single_session(session: TrainingSession = Depends(get_session_with
     return session
 
 
-@router.delete('/{session_id}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    '/{session_id}',
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_one_session(
     db: AsyncSession = Depends(get_db),
     session: TrainingSession = Depends(get_locked_session),
@@ -80,3 +86,28 @@ async def delete_one_session(
     except service.SessionDeletionException as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
         
+@router.get(
+    "/{session_id}/progress",
+    status_code=status.HTTP_200_OK,
+)
+async def session_progress(
+    db: AsyncSession = Depends(get_db),
+    session: TrainingSession = Depends(get_session)
+):
+    session_summary = await service.summarize_sessions(db, [session])
+    if not session_summary:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not fetch summary of this session"
+        )
+    return session_summary[0]
+
+@router.get(
+    "/{session_id}/result",
+    status_code=status.HTTP_200_OK,
+)
+async def session_result(
+    db: AsyncSession = Depends(get_db),
+    session: TrainingSession = Depends(get_session)
+):
+    """TODO""" 

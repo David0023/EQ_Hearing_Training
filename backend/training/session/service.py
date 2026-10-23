@@ -39,19 +39,15 @@ async def get_my_sessions(
         ),
     )
 
-async def get_my_session_summaries(
+async def summarize_sessions(
     db: AsyncSession,
-    user_id: int,
-    page: int = 1,
-    page_size: int = 20,
+    sessions: list[TrainingSession]
 ) -> list[TrainingSessionSummary]:
-    """Return a page of a user's sessions with aggregated question statistics."""
-    sessions = await get_my_sessions(db, user_id, page=page, page_size=page_size)
     stats_by_session = await question_repository.get_session_statistics(
         db, [session.id for session in sessions]
     )
 
-    summaries = []
+    summaries: list[TrainingSessionSummary] = []
     for session in sessions:
         answered, correct = stats_by_session.get(session.id, (0, 0))
         summaries.append(
@@ -64,6 +60,15 @@ async def get_my_session_summaries(
         )
     return summaries
 
+async def get_my_session_summaries(
+    db: AsyncSession,
+    user_id: int,
+    page: int = 1,
+    page_size: int = 20,
+) -> list[TrainingSessionSummary]:
+    """Return a page of a user's sessions with aggregated question statistics."""
+    sessions = await get_my_sessions(db, user_id, page=page, page_size=page_size)
+    return await summarize_sessions(db, sessions)
 
 async def get_session(
     db: AsyncSession, *,
@@ -141,3 +146,10 @@ async def update_timestamp(db: AsyncSession, session: TrainingSession):
             last_accessed_at=datetime.now(timezone.utc)
         )
     return session
+
+
+async def session_result(
+    db: AsyncSession,
+    sessions: TrainingSession
+):
+    """TODO"""
