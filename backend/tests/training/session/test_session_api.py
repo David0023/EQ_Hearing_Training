@@ -47,8 +47,9 @@ async def test_session_access_controls(client, headers):
             assert response.status_code == expected, response.text
 
 @pytest.mark.parametrize('override', [
-    {'min_frequency': 123}, {'gain_level': 2},
+    {'min_frequency': 123}, {'min_gain': 2},
     {'min_frequency': 1000, 'max_frequency': 125},
+    {'min_gain': 9, 'max_gain': 3},
 ])
 async def test_invalid_session_settings(client, headers, override):
     response = await client.post(f'{BASE}/sessions', headers=headers, json=SETTINGS | override)
@@ -70,6 +71,8 @@ async def test_last_answer_completes_session(client, headers):
     assert detail['session_status'] == 'completed'
     assert detail['completed_at'] is not None
     assert detail['training_questions'][0]['is_answered'] is True
+    assert detail['training_questions'][0]['question_type'] == 'simple_blind'
+    assert detail['training_questions'][0]['target_frequency'] > 0
     response = await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)
     assert response.status_code == 400, response.text
 
@@ -91,3 +94,20 @@ async def test_completion_failure_rolls_back_answer(client, headers, monkeypatch
     assert detail['session_status'] == 'in_progress'
     assert detail['completed_at'] is None
     assert detail['training_questions'][0]['is_answered'] is False
+
+
+async def test_session_persists_question_plan_config(client, headers):
+    response = await client.post(f'{BASE}/sessions', headers=headers, json=SETTINGS)
+    assert response.status_code == 201, response.text
+    assert response.json()['config'] == {
+        'question_plan': [{
+            'question_type': 'simple_blind',
+            'count': SETTINGS['num_questions'],
+            'settings': {
+                'min_frequency': SETTINGS['min_frequency'],
+                'max_frequency': SETTINGS['max_frequency'],
+                'min_gain': SETTINGS['min_gain'],
+                'max_gain': SETTINGS['max_gain'],
+            },
+        }],
+    }

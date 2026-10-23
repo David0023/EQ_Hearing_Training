@@ -3,6 +3,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 from training.session.model import TrainingSession
+from training.question.model import TrainingQuestion
 
 async def get_one(
     db: AsyncSession, *conditions, lock: bool = False, load_questions: bool = False,
@@ -12,7 +13,11 @@ async def get_one(
     if lock:
         query = query.with_for_update()
     if load_questions:
-        query = query.options(selectinload(TrainingSession.training_questions))
+        query = query.options(
+            selectinload(TrainingSession.training_questions).selectinload(
+                TrainingQuestion.simple_blind
+            )
+        )
     result = await db.execute(query)
     return result.scalar_one_or_none()
 

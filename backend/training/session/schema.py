@@ -1,44 +1,52 @@
-from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
-from training.enums import QuestionType, SessionStatus
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from training.enums import SessionStatus
 from training.question.schema import ViewTrainingQuestion
 
-class TrainingSessionBase(BaseModel):
-    num_questions: int
-    question_type: QuestionType
-    min_frequency: float
-    max_frequency: float
-    gain_level: float
 
-class TrainingSessionCreateRequest(BaseModel):
-    num_questions: int = Field(gt=5)
-    question_type: QuestionType
-    min_frequency: float
-    max_frequency: float
-    gain_level: float
-
-class TrainingSessionInfo(TrainingSessionBase):
+class SessionBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     id: int
+    num_questions: int
+    config: dict
     session_status: SessionStatus
     started_at: datetime
     last_accessed_at: datetime | None
     completed_at: datetime | None
 
-class TrainingSessionCreateResponse(TrainingSessionInfo):
+
+class SessionCreateRequest(BaseModel):
+    num_questions: int = Field(gt=0)
+
+
+class SimpleBlindCreateRequest(SessionCreateRequest):
+    min_frequency: float
+    max_frequency: float
+    min_gain: float
+    max_gain: float
+
+
+class SessionCreateResponse(SessionBase):
     pass
 
-class TrainingSessionWithQuestion(TrainingSessionInfo):
+
+class SessionWithQuestions(SessionBase):
     training_questions: list[ViewTrainingQuestion]
 
-class TrainingSessionSummary(BaseModel):
-    session: TrainingSessionInfo
+
+class SessionSummary(BaseModel):
+    session: SessionBase
     answered_count: int
     correct_count: int
     accuracy: float
 
+
 class TrainingSessionSummaryList(BaseModel):
-    sessions: list[TrainingSessionSummary]
+    sessions: list[SessionSummary]
+
 
 class SessionResultPerFrequency(BaseModel):
     frequency: float

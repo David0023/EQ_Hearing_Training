@@ -1,25 +1,21 @@
 from datetime import datetime
-from sqlalchemy import DateTime, func, ForeignKey, CheckConstraint
-from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import DateTime, func, ForeignKey, JSON, Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from db.base import Base
-from training.enums import QuestionType, SessionStatus
+from training.enums import SessionStatus
 
 class TrainingSession(Base):
     __tablename__ = "training_sessions"
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete='CASCADE'), nullable=False)
 
-    # Training session set values
     num_questions: Mapped[int] = mapped_column(nullable=False)
-    question_type: Mapped[QuestionType] = mapped_column(
-            SQLEnum(QuestionType),
-            nullable=False,
-        )
-    min_frequency: Mapped[float] = mapped_column(nullable=False)
-    max_frequency: Mapped[float] = mapped_column(nullable=False)
-    gain_level: Mapped[float] = mapped_column(nullable=False)
-
+    # The plan contains one or more question-type blocks. Keeping the type in
+    # each block lets a future session mix types without making the session a type.
+    config: Mapped[dict] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False, default=dict
+    )
 
     # Session status values
     session_status: Mapped[SessionStatus] = mapped_column(
@@ -51,13 +47,5 @@ class TrainingSession(Base):
         back_populates="training_session",
         cascade="all, delete-orphan",
         passive_deletes=True,
-    )
-
-    __table_args__ = (
-        CheckConstraint(
-            "gain_level > 0", name="check_gain_positive"
-        ),
-        CheckConstraint(
-            "min_frequency <= max_frequency", name="check_min_lesser_or_equal_than_max"
-        )
+        order_by="TrainingQuestion.sequence",
     )

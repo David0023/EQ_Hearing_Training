@@ -1,5 +1,6 @@
 from typing import NamedTuple
 from sqlalchemy import select, delete, func, case
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from training.question.model import TrainingQuestion
 
@@ -21,6 +22,7 @@ async def get_one(
         .where(*conditions)
         .order_by(TrainingQuestion.id.asc())
         .limit(1)
+        .options(selectinload(TrainingQuestion.simple_blind))
     )
     if lock:
         query = query.with_for_update()
@@ -40,7 +42,12 @@ async def get_all(
     Returns:
         A list of matching questions.
     """
-    query = select(TrainingQuestion).where(*conditions).order_by(TrainingQuestion.id.asc())
+    query = (
+        select(TrainingQuestion)
+        .where(*conditions)
+        .order_by(TrainingQuestion.sequence.asc())
+        .options(selectinload(TrainingQuestion.simple_blind))
+    )
     if lock:
         query = query.with_for_update()
     result = await db.execute(query)
@@ -94,45 +101,25 @@ async def create(
         await db.refresh(training_question)
     return training_question
 
-async def update(
+async def record_answer(
     db: AsyncSession,
-    training_question: TrainingQuestion,
-    flush: bool = False,
-    **kwargs
+    question: TrainingQuestion,
+    *,
+    user_frequency: float,
+    user_gain: float,
+    is_correct: bool,
+    answered_at,
 ) -> TrainingQuestion:
-    """Update and return a training question.
-
-    Args:
-        db: The database session to use.
-        training_question: The question to update.
-        **kwargs: Allowed field names and their new values.
-
-    Returns:
-        The updated training question.
-
-    Raises:
-        ValueError: If an unsupported field is provided.
-    """
-    allowed_fields = {
-        "user_frequency",
-        "user_gain",
-        "is_correct",
-        "is_answered",
-        "answered_at",
-    }
-    invalid_fields = set(kwargs) - allowed_fields
-    if invalid_fields:
-        raise ValueError(
-            f"Cannot update fields: {', '.join(sorted(invalid_fields))}"
-        )
-
-    for field, value in kwargs.items():
-        setattr(training_question, field, value)
-
-    if flush:
-        await db.flush()
-        await db.refresh(training_question)
-    return training_question
+    """Persist an answer in the type-specific and shared question state."""
+    if question.simple_blind is None:
+        raise ValueError("Simple blind question data is missing")
+    question.simple_blind.user_frequency = user_frequency
+    question.simple_blind.user_gain = user_gain
+    question.is_answered = True
+    question.is_correct = is_correct
+    question.answered_at = answered_at
+    await db.flush()
+    return question
 
 async def delete_these(
     db: AsyncSession,

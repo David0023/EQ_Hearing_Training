@@ -24,8 +24,9 @@ async def test_question_lifecycle_and_session_serialization(client, headers, mon
     url = f'{BASE}/sessions/{sid}/questions/{question["id"]}'
     answer = await client.put(url, headers=headers, json=payload)
     assert answer.status_code == 200, answer.text
-    assert answer.json()['is_correct'] is True
-    assert answer.json()['answered_at'] is not None
+    assert answer.json()['question']['is_correct'] is True
+    assert answer.json()['question']['answered_at'] is not None
+    assert answer.json()['question']['question_type'] == 'simple_blind'
     assert get_one.call_args.kwargs['lock'] is True
     assert (await client.put(url, headers=headers, json=payload)).status_code == 400
     next_question = await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)
@@ -36,6 +37,7 @@ async def test_question_lifecycle_and_session_serialization(client, headers, mon
     assert len(detail.json()['training_questions']) == 2
     listing = await client.get(f'{BASE}/sessions/{sid}/questions', headers=headers)
     assert listing.status_code == 200 and len(listing.json()['questions']) == 2
+    assert all(q['question_type'] == 'simple_blind' for q in listing.json()['questions'])
     sessions = await client.get(f'{BASE}/sessions/recent', headers=headers)
     assert len(sessions.json()['sessions']) == 1
     assert (await client.delete(f'{BASE}/sessions/{sid}', headers=headers)).status_code == 204

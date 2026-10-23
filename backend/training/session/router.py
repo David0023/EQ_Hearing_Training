@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from training.session.schema import (
-    TrainingSessionCreateRequest,
-    TrainingSessionCreateResponse,
-    TrainingSessionWithQuestion,
+    SimpleBlindCreateRequest,
+    SessionCreateResponse,
+    SessionWithQuestions,
     TrainingSessionSummaryList,
 )
 
@@ -43,10 +43,10 @@ async def get_recent_sessions(
 @router.post(
     '',
     status_code=status.HTTP_201_CREATED,
-    response_model=TrainingSessionCreateResponse
+    response_model=SessionCreateResponse
 )
 async def create_session(
-    request: TrainingSessionCreateRequest,
+    request: SimpleBlindCreateRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
@@ -56,7 +56,7 @@ async def create_session(
         HTTPException: If session creation fails.
     """
     try:
-        return await service.create_training_session(
+        return await service.create_simple_blind_session(
             db=db,
             user_id=user.id,
             request=request
@@ -67,7 +67,7 @@ async def create_session(
 @router.get(
     '/{session_id}',
     status_code=status.HTTP_200_OK,
-    response_model=TrainingSessionWithQuestion
+    response_model=SessionWithQuestions
 )
 async def get_single_session(session: TrainingSession = Depends(get_session_with_questions)):
     return session
@@ -110,4 +110,4 @@ async def session_result(
     db: AsyncSession = Depends(get_db),
     session: TrainingSession = Depends(get_session)
 ):
-    """TODO""" 
+    """TODO"""
