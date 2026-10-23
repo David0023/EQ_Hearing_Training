@@ -36,3 +36,10 @@ async def get_locked_session(
 ) -> TrainingSession:
     session = await service.get_session(db, session_id=session_id, lock=True)
     return authorize_session(user, session)
+
+async def get_session(
+    session_id: int, db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TrainingSession:
+    session = await service.get_session(db, session_id=session_id, lock=False)
+    return authorize_session(user, session)

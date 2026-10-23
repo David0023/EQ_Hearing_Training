@@ -13,7 +13,7 @@ from training.session import service as session_service
 class SessionCompletedException(Exception):
     pass
 
-class QuestionAnsweredException(Exception):
+class QuestionAnswerException(Exception):
     pass
 
 class QuestionNotFoundException(Exception):
@@ -82,9 +82,10 @@ async def get_or_create_question(
 async def answer_question(
     db: AsyncSession, session: TrainingSession, question_id: int,
     answer: AnswerQuestionRequest,
-) -> TrainingQuestion:
+) -> tuple[bool, TrainingQuestion]:
     """
     Record an answer while the caller holds the session lock.
+    return answered question object and boolean for whether session is complete.
 
 
     Raises: QuestionNotFoundException, QuestionAnsweredException,
@@ -97,7 +98,7 @@ async def answer_question(
     if question is None:
         raise QuestionNotFoundException()
     if question.is_answered:
-        raise QuestionAnsweredException()
+        raise QuestionAnswerException("The question is already answered.")
 
     try:
         question = await repository.update(
@@ -113,12 +114,13 @@ async def answer_question(
         questions = await repository.get_all(
                 db, TrainingQuestion.training_session_id == session.id,
         )
-        if len(questions) == session.num_questions:
+        session_complete = len(questions) == session.num_questions
+        if session_complete:
             await session_service.mark_session_complete(db, session)
 
         await session_service.update_timestamp(db, session)
         await db.commit()
-        return question
+        return (session_complete, question)
     except Exception as e:
         await db.rollback()
         raise e

@@ -27,3 +27,7 @@ class GetAllTrainingQuestions(TrainingQuestionBase):
 class AnswerQuestionRequest(BaseModel):
     user_frequency: float
     user_gain: float
+
+class AnswerQuestionResposne(BaseModel):
+    session_complete: bool
+    question: ViewTrainingQuestion

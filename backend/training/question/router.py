@@ -5,13 +5,16 @@ from training.dependencies import get_locked_session, get_session_with_questions
 from training.question import service
 from training.question.schema import (
     GetTrainingQuestionResponse, AnswerQuestionRequest, ViewTrainingQuestion,
-    GetAllTrainingQuestions,
+    GetAllTrainingQuestions, AnswerQuestionResposne
 )
 from training.session.model import TrainingSession
 
 router = APIRouter(prefix="/sessions", tags=["questions"])
 
-@router.get("/{session_id}/questions", response_model=GetAllTrainingQuestions)
+@router.get(
+    "/{session_id}/questions",
+    response_model=GetAllTrainingQuestions
+)
 async def get_all_questions(
     session: TrainingSession = Depends(get_session_with_questions),
 ):
@@ -19,9 +22,11 @@ async def get_all_questions(
         questions=session.training_questions, question_type=session.question_type,
     )
 
-
-@router.post("/{session_id}/questions", status_code=status.HTTP_201_CREATED,
-             response_model=GetTrainingQuestionResponse)
+@router.post(
+    "/{session_id}/questions/resume",
+    status_code=status.HTTP_201_CREATED,
+    response_model=GetTrainingQuestionResponse
+)
 async def start_question_or_continue(
     response: Response, db: AsyncSession = Depends(get_db),
     session: TrainingSession = Depends(get_locked_session),
@@ -34,11 +39,10 @@ async def start_question_or_continue(
         response.status_code = status.HTTP_200_OK
     return GetTrainingQuestionResponse(question=question, question_type=session.question_type)
 
-
 @router.put(
     "/{session_id}/questions/{question_id}",
     status_code=status.HTTP_200_OK,
-    response_model=ViewTrainingQuestion
+    response_model=AnswerQuestionResposne
 )
 async def answer_question(
     question_id: int, form: AnswerQuestionRequest,
@@ -46,8 +50,9 @@ async def answer_question(
     session: TrainingSession = Depends(get_locked_session),
 ):
     try:
-        return await service.answer_question(db, session, question_id, form)
-    except service.QuestionAnsweredException:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="The question is already answered.")
+        session_complete, question = await service.answer_question(db, session, question_id, form)
+        return AnswerQuestionResposne(session_complete=session_complete, question=question)
+    except service.QuestionAnswerException as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
     except service.QuestionNotFoundException:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="The question could not be found.")
