@@ -1,7 +1,14 @@
+from typing import TypedDict
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+
 from training.enums import QuestionType
 
+
+class PlanItem(TypedDict):
+    question_type: str
+    count: int
+    settings: dict
 
 @dataclass(frozen=True)
 class GeneratedQuestion:
@@ -10,7 +17,7 @@ class GeneratedQuestion:
     target_gain: float
 
 
-class TrainingRule(ABC):
+class QuestionRule(ABC):
     question_type: QuestionType
 
     @abstractmethod

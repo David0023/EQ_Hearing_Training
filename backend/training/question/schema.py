@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from training.enums import QuestionType
+from training.question.types.simple_blind.schema import SimpleBlindAnswer
 
 
 class ViewTrainingQuestion(BaseModel):
@@ -29,9 +30,9 @@ class GetAllTrainingQuestions(BaseModel):
     questions: list[ViewTrainingQuestion]
 
 
-class AnswerQuestionRequest(BaseModel):
-    user_frequency: float
-    user_gain: float
+# The router accepts the active type's answer schema. Extend this to a
+# discriminated union when another question type adds its answer schema.
+AnswerQuestionRequest = SimpleBlindAnswer
 
 
 class AnswerQuestionResponse(BaseModel):

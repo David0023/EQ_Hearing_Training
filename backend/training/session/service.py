@@ -5,6 +5,7 @@ from training.session.model import TrainingSession
 from training.session import repository
 from training.domain.info import STANDARD_GAIN_OPTIONS, validate_frequency, validate_gain
 from training.enums import QuestionType
+from training.question.types.simple_blind import service as simple_blind_service
 
 from training.session.schema import (
     SimpleBlindCreateRequest,
@@ -107,16 +108,13 @@ async def create_simple_blind_session(
         user_id=user_id,
         num_questions=request.num_questions,
         config={
-            "question_plan": [{
-                "question_type": QuestionType.SIMPLE_BLIND.value,
-                "count": request.num_questions,
-                "settings": {
-                    "min_frequency": request.min_frequency,
-                    "max_frequency": request.max_frequency,
-                    "min_gain": request.min_gain,
-                    "max_gain": request.max_gain,
-                },
-            }],
+            "question_plan": [simple_blind_service.config(
+                num_questions=request.num_questions,
+                min_frequency=request.min_frequency,
+                max_frequency=request.max_frequency,
+                min_gain=request.min_gain,
+                max_gain=request.max_gain
+            )],
         }
     )
 

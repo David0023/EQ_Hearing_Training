@@ -3,9 +3,27 @@ from sqlalchemy import select, delete, func, case
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from training.question.model import TrainingQuestion
+from training.enums import QuestionType
+
+
+QUESTION_TYPE_LOADERS = {
+    QuestionType.SIMPLE_BLIND: lambda: selectinload(TrainingQuestion.simple_blind),
+}
+
+
+def _question_type_load_options(question_type: QuestionType | None):
+    """Build eager-load options for one type, or all registered types."""
+    return tuple(
+        loader()
+        for registered_type, loader in QUESTION_TYPE_LOADERS.items()
+        if question_type is None or registered_type == question_type
+    )
 
 async def get_one(
-    db: AsyncSession, *conditions, lock: bool = False
+    db: AsyncSession,
+    question_type: QuestionType | None,
+    *conditions,
+    lock: bool = False,
 ) -> TrainingQuestion | None:
     """Return one training question matching the given model fields.
 
@@ -22,8 +40,9 @@ async def get_one(
         .where(*conditions)
         .order_by(TrainingQuestion.id.asc())
         .limit(1)
-        .options(selectinload(TrainingQuestion.simple_blind))
+        .options(*_question_type_load_options(question_type))
     )
+
     if lock:
         query = query.with_for_update()
     result = await db.execute(query)
@@ -46,7 +65,7 @@ async def get_all(
         select(TrainingQuestion)
         .where(*conditions)
         .order_by(TrainingQuestion.sequence.asc())
-        .options(selectinload(TrainingQuestion.simple_blind))
+        .options(*_question_type_load_options(None))
     )
     if lock:
         query = query.with_for_update()
@@ -105,16 +124,10 @@ async def record_answer(
     db: AsyncSession,
     question: TrainingQuestion,
     *,
-    user_frequency: float,
-    user_gain: float,
     is_correct: bool,
     answered_at,
 ) -> TrainingQuestion:
     """Persist an answer in the type-specific and shared question state."""
-    if question.simple_blind is None:
-        raise ValueError("Simple blind question data is missing")
-    question.simple_blind.user_frequency = user_frequency
-    question.simple_blind.user_gain = user_gain
     question.is_answered = True
     question.is_correct = is_correct
     question.answered_at = answered_at

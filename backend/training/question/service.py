@@ -2,17 +2,15 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from training.domain.info import STANDARD_GAIN_OPTIONS, get_frequency_range
-from training.domain.generator import generate_question
 from training.enums import QuestionType, SessionStatus
 from training.question import repository
 from training.question.model import TrainingQuestion
-from training.question.models.simple_blind import SimpleBlindQuestion
 from training.question.schema import AnswerQuestionRequest
-from training.question.types.simple_blind.rule import SimpleBlindRule
 from training.session import service as session_service
 from training.session.model import TrainingSession
-
+from training.question.types.simple_blind import service as simple_blind_service
+from training.question.types.base import PlanItem
+from training.question.types.registry import get_answer_service
 
 class SessionCompletedException(Exception):
     pass
@@ -25,8 +23,11 @@ class QuestionAnswerException(Exception):
 class QuestionNotFoundException(Exception):
     pass
 
+class QuestionCreationException(Exception):
+    pass
 
-def _get_next_plan_block(session: TrainingSession, question_count: int) -> dict:
+
+def _get_next_plan_block(session: TrainingSession, question_count: int) -> PlanItem:
     plan = session.config.get("question_plan", [])
     if not isinstance(plan, list):
         raise ValueError("Session question_plan must be a list")
@@ -38,22 +39,6 @@ def _get_next_plan_block(session: TrainingSession, question_count: int) -> dict:
         consumed += count
     raise SessionCompletedException()
 
-
-def _build_rule(block: dict) -> SimpleBlindRule:
-    question_type = QuestionType(block["question_type"])
-    if question_type is not QuestionType.SIMPLE_BLIND:
-        raise ValueError(f"Unsupported question type: {question_type.value}")
-
-    settings = block["settings"]
-    frequencies = get_frequency_range(settings["min_frequency"], settings["max_frequency"])
-    gain_options = [
-        gain for gain in STANDARD_GAIN_OPTIONS
-        if settings["min_gain"] <= gain <= settings["max_gain"]
-    ]
-    gains = [-gain for gain in gain_options] + [0.0] + gain_options
-    return SimpleBlindRule(frequencies=frequencies, gains=gains)
-
-
 async def create_question(db: AsyncSession, session: TrainingSession) -> TrainingQuestion:
     if session.session_status == SessionStatus.COMPLETED:
         raise SessionCompletedException()
@@ -61,31 +46,37 @@ async def create_question(db: AsyncSession, session: TrainingSession) -> Trainin
     questions = await repository.get_all(db, TrainingQuestion.training_session_id == session.id)
     if len(questions) >= session.num_questions:
         raise SessionCompletedException()
+
     plan_block = _get_next_plan_block(session, len(questions))
-    generated = generate_question(_build_rule(plan_block))
     question = TrainingQuestion(
         training_session_id=session.id,
         sequence=len(questions) + 1,
-        question_type=generated.question_type,
-        simple_blind=SimpleBlindQuestion(
-            target_frequency=generated.target_frequency,
-            target_gain=generated.target_gain,
-        ),
+        question_type=QuestionType(plan_block["question_type"]),
     )
+
+    if plan_block["question_type"] == QuestionType.SIMPLE_BLIND.value:
+        question.simple_blind = simple_blind_service.generate_question(plan_block)
+    else:
+        raise QuestionCreationException("Invalid Question Type")
     try:
         question = await repository.create(db, question, flush=True)
         await db.commit()
-        return await repository.get_one(db, TrainingQuestion.id == question.id)
+        persisted_question = await repository.get_one(
+            db, question.question_type, TrainingQuestion.id == question.id
+        )
+        if persisted_question is None:
+            raise QuestionCreationException("Created question could not be reloaded")
+        return persisted_question
     except Exception:
         await db.rollback()
         raise
-
 
 async def get_or_create_question(
     db: AsyncSession, session: TrainingSession,
 ) -> tuple[TrainingQuestion, bool]:
     question = await repository.get_one(
         db,
+        None,
         TrainingQuestion.training_session_id == session.id,
         TrainingQuestion.is_answered.is_(False),
         lock=True,
@@ -109,6 +100,7 @@ async def answer_question(
 ) -> tuple[bool, TrainingQuestion]:
     question = await repository.get_one(
         db,
+        None,
         TrainingQuestion.training_session_id == session.id,
         TrainingQuestion.id == question_id,
         lock=True,
@@ -117,20 +109,13 @@ async def answer_question(
         raise QuestionNotFoundException()
     if question.is_answered:
         raise QuestionAnswerException("The question is already answered.")
-    if question.question_type is not QuestionType.SIMPLE_BLIND or question.simple_blind is None:
-        raise QuestionAnswerException("This question type cannot be answered yet.")
-
     try:
-        detail = question.simple_blind
-        question = await repository.record_answer(
+        answer_service = get_answer_service(question.question_type)
+        is_correct = await answer_service(db, question, answer)
+        await repository.record_answer(
             db,
             question,
-            user_frequency=answer.user_frequency,
-            user_gain=answer.user_gain,
-            is_correct=(
-                detail.target_frequency == answer.user_frequency
-                and detail.target_gain == answer.user_gain
-            ),
+            is_correct=is_correct,
             answered_at=datetime.now(timezone.utc),
         )
         questions = await repository.get_all(
@@ -144,6 +129,9 @@ async def answer_question(
         await session_service.update_timestamp(db, session)
         await db.commit()
         return session_complete, question
+    except ValueError as exc:
+        await db.rollback()
+        raise QuestionAnswerException(str(exc)) from exc
     except Exception:
         await db.rollback()
         raise
