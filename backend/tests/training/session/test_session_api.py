@@ -27,7 +27,7 @@ async def test_recent_sessions_pagination(client, headers):
 
 async def test_session_access_controls(client, headers):
     sid = await create_session(client, headers)
-    question = (await client.post(f'{BASE}/sessions/{sid}/questions', headers=headers)).json()['question']
+    question = (await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)).json()['question']
     await client.post('/auth/register', json={
         'username': 'other', 'email': 'other@example.com', 'password': 'test-password',
     })
@@ -40,7 +40,7 @@ async def test_session_access_controls(client, headers):
             ('GET', f'/sessions/{session_id}', None),
             ('DELETE', f'/sessions/{session_id}', None),
             ('GET', f'/sessions/{session_id}/questions', None),
-            ('POST', f'/sessions/{session_id}/questions', None),
+            ('POST', f'/sessions/{session_id}/questions/resume', None),
             ('PUT', f'/sessions/{session_id}/questions/{question["id"]}', {'user_frequency': 125, 'user_gain': 3}),
         ]:
             response = await client.request(method, BASE + path, headers=other, json=body)
@@ -60,7 +60,7 @@ async def test_last_answer_completes_session(client, headers):
     )
     assert response.status_code == 201, response.text
     sid = response.json()['id']
-    question = (await client.post(f'{BASE}/sessions/{sid}/questions', headers=headers)).json()['question']
+    question = (await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)).json()['question']
     response = await client.put(
         f'{BASE}/sessions/{sid}/questions/{question["id"]}', headers=headers,
         json={'user_frequency': question['target_frequency'], 'user_gain': question['target_gain']},
@@ -70,7 +70,7 @@ async def test_last_answer_completes_session(client, headers):
     assert detail['session_status'] == 'completed'
     assert detail['completed_at'] is not None
     assert detail['training_questions'][0]['is_answered'] is True
-    response = await client.post(f'{BASE}/sessions/{sid}/questions', headers=headers)
+    response = await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)
     assert response.status_code == 400, response.text
 
 async def test_completion_failure_rolls_back_answer(client, headers, monkeypatch):
@@ -80,7 +80,7 @@ async def test_completion_failure_rolls_back_answer(client, headers, monkeypatch
         f'{BASE}/sessions', headers=headers, json=SETTINGS | {'num_questions': 1},
     )
     sid = response.json()['id']
-    question = (await client.post(f'{BASE}/sessions/{sid}/questions', headers=headers)).json()['question']
+    question = (await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)).json()['question']
     monkeypatch.setattr(session_service, 'mark_session_complete', AsyncMock(side_effect=RuntimeError('completion failed')))
     with pytest.raises(RuntimeError, match='completion failed'):
         await client.put(

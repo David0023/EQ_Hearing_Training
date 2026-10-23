@@ -24,6 +24,7 @@ async def test_routes_and_metadata(client):
         '/api/v1/training/sessions',
         '/api/v1/training/sessions/{session_id}',
         '/api/v1/training/sessions/{session_id}/questions',
+        '/api/v1/training/sessions/{session_id}/questions/resume',
         '/api/v1/training/sessions/{session_id}/questions/{question_id}',
         '/api/v1/training/infos/frequency/groups',
         '/api/v1/training/infos/gain/options',
@@ -31,7 +32,8 @@ async def test_routes_and_metadata(client):
         '/api/v1/statistics/week',
     }
     assert set(paths) == expected_paths
-    assert set(paths['/api/v1/training/sessions/{session_id}/questions']) == {'get', 'post'}
+    assert set(paths['/api/v1/training/sessions/{session_id}/questions']) == {'get'}
+    assert set(paths['/api/v1/training/sessions/{session_id}/questions/resume']) == {'post'}
     assert set(paths['/api/v1/training/sessions/{session_id}/questions/{question_id}']) == {'put'}
     assert (await client.get('/api/v1/training/infos/frequency/groups')).json()['available_groups']
     assert 3.0 in (await client.get('/api/v1/training/infos/gain/options')).json()['gain_options']

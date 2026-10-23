@@ -27,7 +27,7 @@ async def test_auth_and_account_deletion(client, headers):
     })
     assert duplicate.status_code == 409 
     sid = await create_session(client, headers)
-    assert (await client.post(f'{BASE}/sessions/{sid}/questions', headers=headers)).status_code == 201
+    assert (await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)).status_code == 201
     response = await client.request(
         'DELETE',
         '/api/v1/users/me',

@@ -13,8 +13,8 @@ async def test_question_deletion_preserves_other_rows(client, headers, count):
 
     first = await create_session(client, headers)
     second = await create_session(client, headers)
-    keep = (await client.post(f'{BASE}/sessions/{first}/questions', headers=headers)).json()['question']['id']
-    target = (await client.post(f'{BASE}/sessions/{second}/questions', headers=headers)).json()['question']['id']
+    keep = (await client.post(f'{BASE}/sessions/{first}/questions/resume', headers=headers)).json()['question']['id']
+    target = (await client.post(f'{BASE}/sessions/{second}/questions/resume', headers=headers)).json()['question']['id']
     async with database.SessionLocal() as db:
         deleted = await question_repository.delete_these(
             db, TrainingQuestion.id == target, count=count, flush=True,

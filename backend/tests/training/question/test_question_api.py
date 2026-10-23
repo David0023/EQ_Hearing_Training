@@ -13,11 +13,11 @@ async def test_question_lifecycle_and_session_serialization(client, headers, mon
     get_one = AsyncMock(wraps=session_repository.get_one)
     monkeypatch.setattr(session_repository, 'get_one', get_one)
     sid = await create_session(client, headers)
-    response = await client.post(f'{BASE}/sessions/{sid}/questions', headers=headers)
+    response = await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)
     assert response.status_code == 201, response.text
     question = response.json()['question']
     assert get_one.call_args.kwargs['lock'] is True
-    resumed = await client.post(f'{BASE}/sessions/{sid}/questions', headers=headers)
+    resumed = await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)
     assert resumed.status_code == 200
     assert resumed.json()['question']['id'] == question['id']
     payload = {'user_frequency': question['target_frequency'], 'user_gain': question['target_gain']}
@@ -28,7 +28,7 @@ async def test_question_lifecycle_and_session_serialization(client, headers, mon
     assert answer.json()['answered_at'] is not None
     assert get_one.call_args.kwargs['lock'] is True
     assert (await client.put(url, headers=headers, json=payload)).status_code == 400
-    next_question = await client.post(f'{BASE}/sessions/{sid}/questions', headers=headers)
+    next_question = await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)
     assert next_question.status_code == 201
     assert next_question.json()['question']['id'] != question['id']
     detail = await client.get(f'{BASE}/sessions/{sid}', headers=headers)
@@ -48,7 +48,7 @@ async def test_question_lifecycle_and_session_serialization(client, headers, mon
 async def test_question_must_belong_to_session(client, headers):
     first = await create_session(client, headers)
     second = await create_session(client, headers)
-    question = (await client.post(f'{BASE}/sessions/{first}/questions', headers=headers)).json()['question']
+    question = (await client.post(f'{BASE}/sessions/{first}/questions/resume', headers=headers)).json()['question']
     response = await client.put(f'{BASE}/sessions/{second}/questions/{question["id"]}', headers=headers,
                                 json={'user_frequency': 125, 'user_gain': 3})
     assert response.status_code == 404
@@ -68,7 +68,7 @@ async def test_concurrent_duplicate_answers_are_rejected(client, headers):
 
     # Start new question: 201
     response = await client.post(
-        f'{BASE}/sessions/{session_id}/questions', headers=headers,
+        f'{BASE}/sessions/{session_id}/questions/resume', headers=headers,
     )
     assert response.status_code == 201, response.text
     question = response.json()['question']
