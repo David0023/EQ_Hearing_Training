@@ -32,9 +32,15 @@ async def delete_me(
     current_user: User = Depends(get_current_user)
 ):
     """Delete the authenticated user."""
-    img_key = current_user.profile_img_key
+    profile_img_key = current_user.profile_img_key
     try:
         await service.delete_user(request, db, current_user)
+        if profile_img_key is not None:
+            background_tasks.add_task(
+                img_service.delete_image,
+                settings.LOCAL_UPLOAD_DIR,
+                profile_img_key,
+            )
     except service.UserUnauthenticated as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except Exception:
@@ -42,10 +48,6 @@ async def delete_me(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Could not delete user",
             )
-    finally:
-        if img_key is not None:
-            background_tasks.add_task(img_service.delete_image, settings.LOCAL_UPLOAD_DIR, current_user.img_key)
-
 
 @router.put('/profile/image', 
     status_code=status.HTTP_200_OK,
