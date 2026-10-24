@@ -1,14 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
-from training.enums import SessionStatus
+from training.enums import QuestionType, SessionStatus
 from training.session.model import TrainingSession
 from training.session import repository
-from training.domain.info import STANDARD_GAIN_OPTIONS, validate_frequency, validate_gain
-from training.enums import QuestionType
-from training.question.types.simple_blind import service as simple_blind_service
+from training.question.types.registry import get_strategy
 
 from training.session.schema import (
-    SimpleBlindCreateRequest,
+    SessionCreateRequest,
     SessionSummary,
 )
 from training.question import repository as question_repository
@@ -82,10 +80,10 @@ async def get_session(
     )
 
 
-async def create_simple_blind_session(
+async def create_session(
     db: AsyncSession,
     user_id: int,
-    request: SimpleBlindCreateRequest,
+    request: SessionCreateRequest,
 ) -> TrainingSession:
     """Validate training settings and create a training session.
 
@@ -93,29 +91,20 @@ async def create_simple_blind_session(
         SessionCreationException: If a frequency or gain setting is invalid.
     """
 
-    if not (validate_frequency(request.min_frequency) and validate_frequency(request.max_frequency)):
-        raise SessionCreationException("Invalid Frequency Option")
-    if request.min_frequency > request.max_frequency:
-        raise SessionCreationException("Invalid Frequency Range")
-    if not (validate_gain(request.min_gain) and validate_gain(request.max_gain)):
-        raise SessionCreationException("Invalid Gain Option")
-    if request.min_gain > request.max_gain:
-        raise SessionCreationException("Invalid Gain Range")
-    gains = [gain for gain in STANDARD_GAIN_OPTIONS if request.min_gain <= gain <= request.max_gain]
-    if not gains:
-        raise SessionCreationException("Gain range has no available options")
+    setting = request.setting
+    try:
+        strategy = get_strategy(QuestionType(setting.question_type))
+        plan_item = strategy.build_plan_item(
+            count=request.num_questions,
+            settings=setting.model_dump(exclude={"question_type"}),
+        )
+    except ValueError as exc:
+        raise SessionCreationException(str(exc)) from exc
+
     session = TrainingSession(
         user_id=user_id,
         num_questions=request.num_questions,
-        config={
-            "question_plan": [simple_blind_service.config(
-                num_questions=request.num_questions,
-                min_frequency=request.min_frequency,
-                max_frequency=request.max_frequency,
-                min_gain=request.min_gain,
-                max_gain=request.max_gain
-            )],
-        }
+        config={"question_plan": [plan_item]},
     )
 
     try:

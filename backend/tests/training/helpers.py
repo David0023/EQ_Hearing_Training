@@ -1,10 +1,13 @@
 BASE = '/api/v1/training'
 SETTINGS = {
     'num_questions': 2,
-    'min_frequency': 125,
-    'max_frequency': 1000,
-    'min_gain': 3.0,
-    'max_gain': 3.0,
+    'setting': {
+        'question_type': 'simple_blind',
+        'min_frequency': 125,
+        'max_frequency': 1000,
+        'min_gain': 3.0,
+        'max_gain': 3.0,
+    },
 }
 
 

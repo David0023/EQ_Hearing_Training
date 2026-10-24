@@ -8,9 +8,8 @@ from training.question.model import TrainingQuestion
 from training.question.schema import AnswerQuestionRequest
 from training.session import service as session_service
 from training.session.model import TrainingSession
-from training.question.types.simple_blind import service as simple_blind_service
 from training.question.types.base import PlanItem
-from training.question.types.registry import get_answer_service
+from training.question.types.registry import get_strategy
 
 class SessionCompletedException(Exception):
     pass
@@ -48,16 +47,18 @@ async def create_question(db: AsyncSession, session: TrainingSession) -> Trainin
         raise SessionCompletedException()
 
     plan_block = _get_next_plan_block(session, len(questions))
+    question_type = QuestionType(plan_block["question_type"])
+    strategy = get_strategy(question_type)
+
     question = TrainingQuestion(
         training_session_id=session.id,
         sequence=len(questions) + 1,
-        question_type=QuestionType(plan_block["question_type"]),
+        question_type=question_type,
     )
 
-    if plan_block["question_type"] == QuestionType.SIMPLE_BLIND.value:
-        question.simple_blind = simple_blind_service.generate_question(plan_block)
-    else:
-        raise QuestionCreationException("Invalid Question Type")
+    question_detail = strategy.generate_question(plan_block["settings"])
+    strategy.attach_question_detail(question, question_detail)
+
     try:
         question = await repository.create(db, question, flush=True)
         await db.commit()
@@ -109,9 +110,13 @@ async def answer_question(
         raise QuestionNotFoundException()
     if question.is_answered:
         raise QuestionAnswerException("The question is already answered.")
+    if answer.question_type != question.question_type.value:
+        raise QuestionAnswerException("Answer type does not match question type.")
+
     try:
-        answer_service = get_answer_service(question.question_type)
-        is_correct = await answer_service(db, question, answer)
+
+        strategy = get_strategy(question.question_type)
+        is_correct = await strategy.record_answer(db, question, answer)
         await repository.record_answer(
             db,
             question,

@@ -20,7 +20,11 @@ async def test_question_lifecycle_and_session_serialization(client, headers, mon
     resumed = await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)
     assert resumed.status_code == 200
     assert resumed.json()['question']['id'] == question['id']
-    payload = {'user_frequency': question['target_frequency'], 'user_gain': question['target_gain']}
+    payload = {
+        'question_type': 'simple_blind',
+        'user_frequency': question['target_frequency'],
+        'user_gain': question['target_gain'],
+    }
     url = f'{BASE}/sessions/{sid}/questions/{question["id"]}'
     answer = await client.put(url, headers=headers, json=payload)
     assert answer.status_code == 200, answer.text
@@ -52,7 +56,11 @@ async def test_question_must_belong_to_session(client, headers):
     second = await create_session(client, headers)
     question = (await client.post(f'{BASE}/sessions/{first}/questions/resume', headers=headers)).json()['question']
     response = await client.put(f'{BASE}/sessions/{second}/questions/{question["id"]}', headers=headers,
-                                json={'user_frequency': 125, 'user_gain': 3})
+                                json={
+                                    'question_type': 'simple_blind',
+                                    'user_frequency': 125,
+                                    'user_gain': 3,
+                                })
     assert response.status_code == 404
 
 
@@ -76,6 +84,7 @@ async def test_concurrent_duplicate_answers_are_rejected(client, headers):
     question = response.json()['question']
     url = f'{BASE}/sessions/{session_id}/questions/{question["id"]}'
     payload = {
+        'question_type': 'simple_blind',
         'user_frequency': question['target_frequency'],
         'user_gain': question['target_gain'],
     }

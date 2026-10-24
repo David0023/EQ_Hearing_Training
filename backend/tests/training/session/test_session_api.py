@@ -41,7 +41,9 @@ async def test_session_access_controls(client, headers):
             ('DELETE', f'/sessions/{session_id}', None),
             ('GET', f'/sessions/{session_id}/questions', None),
             ('POST', f'/sessions/{session_id}/questions/resume', None),
-            ('PUT', f'/sessions/{session_id}/questions/{question["id"]}', {'user_frequency': 125, 'user_gain': 3}),
+            ('PUT', f'/sessions/{session_id}/questions/{question["id"]}', {
+                'question_type': 'simple_blind', 'user_frequency': 125, 'user_gain': 3,
+            }),
         ]:
             response = await client.request(method, BASE + path, headers=other, json=body)
             assert response.status_code == expected, response.text
@@ -52,7 +54,8 @@ async def test_session_access_controls(client, headers):
     {'min_gain': 9, 'max_gain': 3},
 ])
 async def test_invalid_session_settings(client, headers, override):
-    response = await client.post(f'{BASE}/sessions', headers=headers, json=SETTINGS | override)
+    payload = SETTINGS | {'setting': SETTINGS['setting'] | override}
+    response = await client.post(f'{BASE}/sessions', headers=headers, json=payload)
     assert response.status_code == 400, response.text
 
 async def test_last_answer_completes_session(client, headers):
@@ -64,7 +67,11 @@ async def test_last_answer_completes_session(client, headers):
     question = (await client.post(f'{BASE}/sessions/{sid}/questions/resume', headers=headers)).json()['question']
     response = await client.put(
         f'{BASE}/sessions/{sid}/questions/{question["id"]}', headers=headers,
-        json={'user_frequency': question['target_frequency'], 'user_gain': question['target_gain']},
+        json={
+            'question_type': 'simple_blind',
+            'user_frequency': question['target_frequency'],
+            'user_gain': question['target_gain'],
+        },
     )
     assert response.status_code == 200, response.text
     detail = (await client.get(f'{BASE}/sessions/{sid}', headers=headers)).json()
@@ -88,7 +95,11 @@ async def test_completion_failure_rolls_back_answer(client, headers, monkeypatch
     with pytest.raises(RuntimeError, match='completion failed'):
         await client.put(
             f'{BASE}/sessions/{sid}/questions/{question["id"]}', headers=headers,
-            json={'user_frequency': question['target_frequency'], 'user_gain': question['target_gain']},
+            json={
+                'question_type': 'simple_blind',
+                'user_frequency': question['target_frequency'],
+                'user_gain': question['target_gain'],
+            },
         )
     detail = (await client.get(f'{BASE}/sessions/{sid}', headers=headers)).json()
     assert detail['session_status'] == 'in_progress'
@@ -104,10 +115,10 @@ async def test_session_persists_question_plan_config(client, headers):
             'question_type': 'simple_blind',
             'count': SETTINGS['num_questions'],
             'settings': {
-                'min_frequency': SETTINGS['min_frequency'],
-                'max_frequency': SETTINGS['max_frequency'],
-                'min_gain': SETTINGS['min_gain'],
-                'max_gain': SETTINGS['max_gain'],
+                'min_frequency': SETTINGS['setting']['min_frequency'],
+                'max_frequency': SETTINGS['setting']['max_frequency'],
+                'min_gain': SETTINGS['setting']['min_gain'],
+                'max_gain': SETTINGS['setting']['max_gain'],
             },
         }],
     }

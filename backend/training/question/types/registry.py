@@ -1,25 +1,15 @@
-from collections.abc import Awaitable, Callable
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from training.enums import QuestionType
-from training.question.model import TrainingQuestion
-from training.question.schema import AnswerQuestionRequest
-from training.question.types.simple_blind import service as simple_blind_service
+from training.question.types.base import QuestionStrategy
+from training.question.types.simple_blind.strategy import SimpleBlindStrategy
 
-
-AnswerService = Callable[
-    [AsyncSession, TrainingQuestion, AnswerQuestionRequest], Awaitable[bool]
-]
-
-ANSWER_SERVICES: dict[QuestionType, AnswerService] = {
-    QuestionType.SIMPLE_BLIND: simple_blind_service.record_answer,
+STRATEGIES: dict[QuestionType, QuestionStrategy] = {
+    QuestionType.SIMPLE_BLIND: SimpleBlindStrategy(),
 }
 
-
-def get_answer_service(question_type: QuestionType) -> AnswerService:
-    """Return the answer handler registered for a question type."""
+def get_strategy(question_type: QuestionType) -> QuestionStrategy:
     try:
-        return ANSWER_SERVICES[question_type]
+        return STRATEGIES[question_type]
     except KeyError as exc:
-        raise ValueError(f"Unsupported question type: {question_type.value}") from exc
+        raise ValueError(
+            f"Unsupported question type: {question_type.value}"
+        ) from exc

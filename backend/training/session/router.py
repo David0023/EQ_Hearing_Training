@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from training.session.schema import (
-    SimpleBlindCreateRequest,
+    SessionCreateRequest,
     SessionCreateResponse,
     SessionWithQuestions,
     TrainingSessionSummaryList,
@@ -46,7 +46,7 @@ async def get_recent_sessions(
     response_model=SessionCreateResponse
 )
 async def create_session(
-    request: SimpleBlindCreateRequest,
+    request: SessionCreateRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
@@ -56,7 +56,7 @@ async def create_session(
         HTTPException: If session creation fails.
     """
     try:
-        return await service.create_simple_blind_session(
+        return await service.create_session(
             db=db,
             user_id=user.id,
             request=request

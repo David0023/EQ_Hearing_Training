@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from training.enums import SessionStatus
 from training.question.schema import ViewTrainingQuestion
+from training.question.types.schema import CreateQuestionRequest
 
 
 class SessionBase(BaseModel):
@@ -20,13 +21,7 @@ class SessionBase(BaseModel):
 
 class SessionCreateRequest(BaseModel):
     num_questions: int = Field(gt=0)
-
-
-class SimpleBlindCreateRequest(SessionCreateRequest):
-    min_frequency: float
-    max_frequency: float
-    min_gain: float
-    max_gain: float
+    setting: CreateQuestionRequest
 
 
 class SessionCreateResponse(SessionBase):
