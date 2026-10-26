@@ -1,25 +1,9 @@
-from datetime import datetime
-
-from pydantic import AliasPath, BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 from training.enums import QuestionType
-from training.question.types.schema import AnswerQuestionRequest
+from training.question.types.schema import AnswerQuestionRequest, QuestionResponse
 
-
-class ViewTrainingQuestion(BaseModel):
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-    id: int
-    sequence: int
-    question_type: QuestionType
-    target_frequency: float = Field(validation_alias=AliasPath("simple_blind", "target_frequency"))
-    target_gain: float = Field(validation_alias=AliasPath("simple_blind", "target_gain"))
-    user_frequency: float | None = Field(validation_alias=AliasPath("simple_blind", "user_frequency"))
-    user_gain: float | None = Field(validation_alias=AliasPath("simple_blind", "user_gain"))
-    is_answered: bool
-    is_correct: bool | None
-    answered_at: datetime | None
-
+ViewTrainingQuestion = QuestionResponse
 
 class GetTrainingQuestionResponse(BaseModel):
     question: ViewTrainingQuestion

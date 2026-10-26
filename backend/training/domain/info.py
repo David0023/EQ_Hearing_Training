@@ -28,10 +28,6 @@ STANDARD_GAIN_OPTIONS: tuple[float] = (
     6.0,
     7.5,
     9.0,
-    10.5,
-    13.0,
-    14.5,
-    15.0
 )
 
 def validate_frequency(frequency: float) -> bool:
@@ -41,6 +37,21 @@ def validate_frequency(frequency: float) -> bool:
 def validate_gain(gain: float) -> bool:
     """Return whether a gain is one of the standard gain options."""
     return gain in STANDARD_GAIN_OPTIONS
+
+def get_all_gain(include_negative:bool = True, include_zero: bool = False) -> list[float]:
+    return get_gain_range(
+        STANDARD_GAIN_OPTIONS[0],
+        STANDARD_GAIN_OPTIONS[-1],
+        include_negative=include_negative,
+        include_zero=include_zero
+    )
+
+def get_gain_range(min_gain: float, max_gain: float, include_negative:bool = True, include_zero: bool = False) -> list[float]:
+    """Return standard gain options within the inclusive gain range."""
+    options = [i for i in STANDARD_GAIN_OPTIONS if min_gain <= i <= max_gain]
+    if include_zero: options = [0] + options
+    if include_negative: options = [-i for i in options] + options
+    return options
 
 def get_frequency_range(min_frequency: float, max_frequency: float) -> list[float]:
     """Return standard frequencies within the inclusive frequency range."""

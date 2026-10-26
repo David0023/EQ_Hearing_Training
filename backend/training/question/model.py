@@ -26,6 +26,9 @@ class TrainingQuestion(Base):
     simple_blind: Mapped["SimpleBlindQuestion | None"] = relationship(
         back_populates="training_question", cascade="all, delete-orphan", uselist=False
     )
+    gain_blind: Mapped["GainBlindQuestion | None"] = relationship(
+        back_populates="training_question", cascade="all, delete-orphan", uselist=False
+    )
 
     __table_args__ = (
         CheckConstraint(

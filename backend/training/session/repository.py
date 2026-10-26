@@ -16,7 +16,10 @@ async def get_one(
         query = query.options(
             selectinload(TrainingSession.training_questions).selectinload(
                 TrainingQuestion.simple_blind
-            )
+            ),
+            selectinload(TrainingSession.training_questions).selectinload(
+                TrainingQuestion.gain_blind
+            ),
         )
     result = await db.execute(query)
     return result.scalar_one_or_none()

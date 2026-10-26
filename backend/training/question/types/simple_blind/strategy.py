@@ -7,7 +7,7 @@ from training.question.types.base import QuestionStrategy, PlanItem
 from training.question.types.simple_blind import repository
 from training.question.types.simple_blind.model import SimpleBlindQuestion
 from training.question.types.simple_blind.rule import SimpleBlindRule
-from training.question.types.schema import SimpleBlindAnswer
+from training.question.types.simple_blind.schema import SimpleBlindAnswer
 from training.domain.info import (
     STANDARD_GAIN_OPTIONS,
     validate_frequency,

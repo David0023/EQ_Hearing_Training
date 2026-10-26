@@ -3,6 +3,7 @@ from user.model import User
 from training.session.model import TrainingSession
 from training.question.model import TrainingQuestion
 from training.question.types.simple_blind.model import SimpleBlindQuestion
+from training.question.types.gain_blind.model import GainBlindQuestion
 from auth.refresh_token.model import RefreshToken
 
-__all__ = ["User", "TrainingSession", "TrainingQuestion", "SimpleBlindQuestion", "RefreshToken"]
+__all__ = ["User", "TrainingSession", "TrainingQuestion", "SimpleBlindQuestion", "GainBlindQuestion", "RefreshToken"]

@@ -8,6 +8,7 @@ from training.enums import QuestionType
 
 QUESTION_TYPE_LOADERS = {
     QuestionType.SIMPLE_BLIND: lambda: selectinload(TrainingQuestion.simple_blind),
+    QuestionType.GAIN_BLIND: lambda: selectinload(TrainingQuestion.gain_blind),
 }
 
 
