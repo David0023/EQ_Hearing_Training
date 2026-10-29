@@ -5,7 +5,7 @@ from auth import security
 from user import repository as user_repo
 from user.model import User
 from user.schema import UserCreateRequest
-from user.validators import check_email
+from user.validators import check_email, check_username, check_password
 from auth.refresh_token import service as refresh_token_service
 
 class InvalidLoginInfo(Exception):
@@ -14,7 +14,7 @@ class InvalidLoginInfo(Exception):
 class InvalidRefreshToken(Exception):
     pass
 
-class InvalidEmail(Exception):
+class RegistrationBadInputException(Exception):
     pass
 
 class DuplicateEmail(Exception):
@@ -79,16 +79,25 @@ def is_email_unique_violation(exc: IntegrityError) -> bool:
 async def register(db: AsyncSession, user_data: UserCreateRequest) -> User:
     is_valid_email, normalised_email = check_email(user_data.email)
     if not is_valid_email:
-        raise InvalidEmail(f"Invalid Email: {normalised_email}")
+        raise RegistrationBadInputException(f"Invalid Email: {normalised_email}")
+
+    is_valid_username, normalised_username = check_username(user_data.username)
+    if not is_valid_username:
+        raise RegistrationBadInputException(f"Invalid Username: {normalised_username}")
+
+    is_valid_password, password = check_password
+    if not is_valid_password:
+        raise RegistrationBadInputException(f"Invalid Password: {password}")
 
     if await user_repo.get_one(db, User.email==normalised_email):
         raise DuplicateEmail("Existing Email")
+
     try:
         new_user = await user_repo.create(
             db=db,
-            username=user_data.username,
+            username=normalised_username,
             email=normalised_email,
-            hashed_pwd=security.hash_password(user_data.password),
+            hashed_pwd=security.hash_password(password),
             flush=True
         )
 

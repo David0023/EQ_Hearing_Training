@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 async def register(user_data: UserCreateRequest, db: AsyncSession = Depends(get_db)):
     try:
         return await service.register(db, user_data)
-    except service.InvalidEmail as e:
+    except service.RegistrationBadInputException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except service.DuplicateEmail as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
