@@ -34,3 +34,4 @@ def check_username(username: str) -> tuple[bool, str]:
 def check_password(password: str) -> tuple[bool, str]:
     if len(password) < MIN_PASSWORD_LENGTH or len(password) > MAX_PASSWORD_LENGTH:
         return False, f"Password must be {MIN_PASSWORD_LENGTH}-{MAX_PASSWORD_LENGTH} characters long."
+    return True, password

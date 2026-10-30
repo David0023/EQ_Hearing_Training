@@ -85,7 +85,7 @@ async def register(db: AsyncSession, user_data: UserCreateRequest) -> User:
     if not is_valid_username:
         raise RegistrationBadInputException(f"Invalid Username: {normalised_username}")
 
-    is_valid_password, password = check_password
+    is_valid_password, password = check_password(user_data.password)
     if not is_valid_password:
         raise RegistrationBadInputException(f"Invalid Password: {password}")
 

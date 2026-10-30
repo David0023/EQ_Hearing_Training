@@ -9,7 +9,7 @@ class UserBaseModel(BaseModel):
 
 class UserCreateRequest(BaseModel):
     username: str = Field(
-        min_length=validators.MIN_PASSWORD_LENGTH,
+        min_length=validators.MIN_USERNAME_LENGTH,
         max_length=validators.MAX_USERNAME_LENGTH,
         pattern=validators.USERNAME_PATTERN
     )
