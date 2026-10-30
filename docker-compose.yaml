@@ -22,7 +22,7 @@ services:
       dockerfile: backend/dockerfile
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/postgres_db
-      SECRET_KEY: very_secure_key
+      SECRET_KEY: very_secure_key_that_is_at_least_32_bytes_long
       PYTHONPATH: /app/backend
     command: ["uv", "run", "--project", "backend", "--locked", "--no-sync", "alembic", "-c", "backend/alembic.ini", "upgrade", "head"]
     depends_on:

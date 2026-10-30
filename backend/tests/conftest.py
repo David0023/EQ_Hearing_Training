@@ -1,15 +1,24 @@
 import os
 from uuid import uuid4
-
 import pytest
+from httpx import ASGITransport, AsyncClient
+
+
 from alembic import command
 from alembic.config import Config
-from httpx import ASGITransport, AsyncClient
+from asgi_lifespan import LifespanManager
+
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 
+# Whenever pytest.mark.anyio is used, it tells pytest to use this plugin
+@pytest.fixture
+def anyio_backend():
+    return 'asyncio'
+
+# Check Test database url settings
 TEST_DATABASE_URL = os.environ.get('TEST_DATABASE_URL')
 if not TEST_DATABASE_URL:
     raise pytest.UsageError(
@@ -18,93 +27,111 @@ if not TEST_DATABASE_URL:
 
 test_url = make_url(TEST_DATABASE_URL)
 if test_url.drivername != 'postgresql+asyncpg':
-    raise pytest.UsageError(
-        'TEST_DATABASE_URL must use PostgreSQL with asyncpg '
-        '(postgresql+asyncpg://...). SQLite is not supported by the test suite.'
-    )
-if not test_url.database or 'test' not in test_url.database.lower():
-    raise pytest.UsageError(
-        'TEST_DATABASE_URL must point to a dedicated database whose name includes "test".'
-    )
+    raise pytest.UsageError("TEST_DATABASE_URL must use PostgreSQL with asyncpg")
+if not test_url.database or "test" not in test_url.database.lower():
+    raise pytest.UsageError("TEST_DATABASE_URL must name a dedicated test database")
 
-# Ensure application settings never fall back to a developer database.
-os.environ['SECRET_KEY'] = 'test-secret-key-for-feature-refactor-only'
-os.environ['DATABASE_URL'] = TEST_DATABASE_URL
 
-from db import database
+# This is required as main.app will use 'DATABASE_URL' when imported.
+# Hence, we have to set its keys before import
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["SECRET_KEY"] = "test-secret-key"
+
 from main import app
-
-
-@pytest.fixture
-def anyio_backend():
-    return 'asyncio'
-
+from db import database
 
 @pytest.fixture
-async def client(monkeypatch):
-    """Use a fresh PostgreSQL schema per test to isolate rows and support row locks."""
-    schema = f'pytest_{uuid4().hex}'
-    admin_engine = create_async_engine(
-        TEST_DATABASE_URL,
-        connect_args={'timeout': 10},
-    )
-    async with admin_engine.begin() as connection:
-        await connection.execute(text(f'CREATE SCHEMA "{schema}"'))
-
-    engine = create_async_engine(
-        TEST_DATABASE_URL,
-        connect_args={
-            'timeout': 10,
-            'server_settings': {'search_path': schema},
-        },
-    )
-    monkeypatch.setattr(database, 'engine', engine)
-    monkeypatch.setattr(
-        database,
-        'SessionLocal',
-        async_sessionmaker(engine, expire_on_commit=False),
-    )
-    # Email deliverability uses external DNS; keep the API and database path real.
-    monkeypatch.setattr('auth.service.check_email', lambda email: (True, email.lower()))
-
+async def use_test_database(monkeypatch):
+    admin_engine = None
+    test_engine = None
+    schema_created = False
     try:
-        alembic_config = Config(os.path.join(os.path.dirname(__file__), '..', 'alembic.ini'))
+        schema = f'pytest_{uuid4().hex}'
 
+        # Admin engine to generate schema
+        admin_engine = create_async_engine(TEST_DATABASE_URL)
+
+        # Test engine for sessions and alembic
+        test_engine = create_async_engine(
+        TEST_DATABASE_URL,
+        connect_args={'server_settings': {'search_path': schema}})
+        monkeypatch.setattr(database, 'engine', test_engine)
+
+        TestSessionLocal = async_sessionmaker(
+            test_engine,
+            expire_on_commit=False
+        )
+        monkeypatch.setattr(database, 'SessionLocal', TestSessionLocal)
+
+        alembic_config = Config(os.path.join(os.path.dirname(__file__), '..', 'alembic.ini'))
         def upgrade_schema(connection):
             alembic_config.attributes['connection'] = connection
             command.upgrade(alembic_config, 'head')
 
-        async with engine.begin() as connection:
+        async with admin_engine.begin() as connection:
+            await connection.execute(text(f'CREATE SCHEMA "{schema}"'))
+        schema_created = True
+
+        async with test_engine.begin() as connection:
             await connection.run_sync(upgrade_schema)
 
-        async with app.router.lifespan_context(app):
-            async with AsyncClient(
-                transport=ASGITransport(app=app), base_url='http://test'
-            ) as test_client:
-                yield test_client
-    finally:
-        await engine.dispose()
-        async with admin_engine.begin() as connection:
-            await connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
-        await admin_engine.dispose()
+        # Skip DNS check for test emails
+        monkeypatch.setattr('auth.service.check_email', lambda email: (True, email.lower()))
 
+        yield
+    
+    finally:
+        if test_engine is not None:
+            await test_engine.dispose()
+        if admin_engine is not None:
+            if schema_created:
+                async with admin_engine.begin() as connection:
+                    await connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+            await admin_engine.dispose()
 
 @pytest.fixture
-async def headers(client):
-    response = await client.post('/auth/register', json={
-        'username': 'tester', 'email': 'tester@example.com', 'password': 'test-password',
-    })
-    assert response.status_code == 201, response.text
-    response = await client.post('/auth/login', data={
-        'username': 'tester@example.com', 'password': 'test-password',
-    })
-    assert response.status_code == 200, response.text
-    return {'Authorization': f'Bearer {response.json()["access_token"]}'}
-
+async def client(use_test_database):
+    async with LifespanManager(app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(
+            transport=transport,
+            base_url='http://test'
+        ) as test_client:
+            yield test_client
 
 @pytest.fixture
 async def db_session(client):
     from db.database import SessionLocal
-
     async with SessionLocal() as db:
         yield db
+
+@pytest.fixture
+async def register_info(client, monkeypatch):
+    email = f"tester-{uuid4().hex}@example.com"
+    username = f"tester-{uuid4().hex[:8]}"
+    password = f"tester-{uuid4().hex[:8]}"
+    response = await client.post(
+        "/auth/register",
+        json={
+            "username": username,
+            "email": email,
+            "password": password,
+        },
+    )
+    assert response.status_code == 201, response.text
+
+    return {"email": email, "username": username, "password": password}
+
+@pytest.fixture
+async def headers(client, register_info):
+    response = await client.post(
+        "/auth/login",
+        data={
+            "username": register_info['email'],
+            "password": register_info['password'],
+        },
+    )
+    assert response.status_code == 200, response.text
+
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
