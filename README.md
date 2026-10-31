@@ -84,10 +84,10 @@ uv run uvicorn main:app --host 0.0.0.0 --port 8000
 
 ## Tests
 
-The Docker-based pytest suite currently passes. Run it from the repository root:
+Run the Docker-based pytest suite from the repository root. The script stops the test database after pytest exits, including when pytest fails:
 
 ```bash
-docker compose run --build --rm test
+./scripts/test.sh
 ```
 
 The suite uses an isolated PostgreSQL test database and covers authentication, account operations, training sessions and questions, ownership checks, deletion behavior, and transaction handling. See [backend/README.md#tests](backend/README.md#tests) for local test setup.

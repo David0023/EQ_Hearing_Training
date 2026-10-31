@@ -143,10 +143,10 @@ Profile images are stored in `uploads/` by default. Set `LOCAL_UPLOAD_DIR` to ch
 
 ## Tests
 
-Run the Docker-based test suite from the repository root:
+Run the Docker-based test suite from the repository root. The script stops the test database after pytest exits, including when pytest fails:
 
 ```bash
-docker compose run --build --rm test
+./scripts/test.sh
 ```
 
 To run tests locally, install the development dependencies from `backend/` and set `TEST_DATABASE_URL` to a dedicated PostgreSQL database whose name includes `test`:
