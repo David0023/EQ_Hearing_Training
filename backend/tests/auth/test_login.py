@@ -120,6 +120,25 @@ async def test_refresh_fails_after_user_deletion(authenticated_client, register_
     )
     assert response.status_code == 401
 
+async def test_access_token_invalidated_after_user_deletion(authenticated_client, register_info):
+    access_token = authenticated_client.headers.get('Authorization', None)
+    assert access_token is not None
+
+    # Delete user must succeed.
+    response = await authenticated_client.request(
+        "DELETE",
+        '/api/v1/users/me',
+        json={'password': register_info['password']}
+    )
+    assert response.status_code == 204
+
+    # Access should be denied after user deletion
+    response = await authenticated_client.get(
+        "/api/v1/users/me", 
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert response.status_code == 401
+
 async def test_refresh_fails_after_user_logout(authenticated_client):
     refresh_token = authenticated_client.cookies.get("refresh_token")
 

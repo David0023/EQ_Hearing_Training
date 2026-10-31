@@ -38,3 +38,24 @@ async def test_profile_image_update(authenticated_client, tmp_path):
     downloaded_path = tmp_path / "downloaded.png"
     downloaded_path.write_bytes(response.content)
     assert downloaded_path.read_bytes() == file_path.read_bytes()
+
+async def test_profile_image_upload_fails_for_invalid_content(authenticated_client, tmp_path):
+    file_path = tmp_path / "profile.png"
+    file_path.write_bytes(b"image bytes")
+
+    with file_path.open('rb') as f:
+        response = await authenticated_client.put(
+            '/api/v1/users/profile/image',
+            files={'file': (file_path.name, f, 'image/png')}
+        )
+        assert response.status_code == 400
+
+async def test_profile_image_upload_fails_for_file_greater_than_5mb(authenticated_client):
+    file_path = Path(__file__).parent / "large.jpg"
+
+    with file_path.open('rb') as f:
+        response = await authenticated_client.put(
+            '/api/v1/users/profile/image',
+            files={'file': (file_path.name, f, 'image/jpeg')}
+        )
+        assert response.status_code == 413
