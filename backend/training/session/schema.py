@@ -21,7 +21,12 @@ class SessionBase(BaseModel):
 
 class SessionCreateRequest(BaseModel):
     num_questions: int = Field(gt=0)
-    setting: CreateQuestionRequest
+    setting: CreateQuestionRequest = Field(
+        description=(
+            "Question settings. Choose the object matching question_type: simple_blind "
+            "requires frequency and gain bounds; gain_blind requires frequency bounds only."
+        )
+    )
 
 
 class SessionCreateResponse(SessionBase):

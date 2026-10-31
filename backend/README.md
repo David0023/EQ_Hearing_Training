@@ -28,7 +28,50 @@ The backend provides the REST API for EQ Hearing Training. Users can create an a
 - View all questions and a progress summary for a session
 - Retrieve available frequency groups and gain options
 
-The only implemented question type is `simple_blind`. The backend validates the requested frequency and gain ranges, then randomly selects target values from the standard options within those ranges. Audio files are not uploaded to or served by the backend.
+The backend supports `simple_blind` and `gain_blind` question types. Each session uses one question type and its corresponding settings. Audio files are not uploaded to or served by the backend.
+
+### Creating a training session from the frontend
+
+`POST /api/v1/training/sessions` expects a `setting` object with a `question_type` discriminator. Build that object based on the selected question type; the required fields differ:
+
+| `question_type` | Required setting fields | What the ranges control |
+| --- | --- | --- |
+| `simple_blind` | `min_frequency`, `max_frequency`, `min_gain`, `max_gain` | Both ranges are inclusive. The backend selects a target frequency and a target gain from the available options in those ranges. |
+| `gain_blind` | `min_frequency`, `max_frequency` | The frequency range is inclusive. The backend selects a target frequency from it and a target gain from all available gain values. |
+
+Example request for `simple_blind`:
+
+```json
+{
+  "num_questions": 20,
+  "setting": {
+    "question_type": "simple_blind",
+    "min_frequency": 125,
+    "max_frequency": 1000,
+    "min_gain": 3,
+    "max_gain": 6
+  }
+}
+```
+
+Example request for `gain_blind`:
+
+```json
+{
+  "num_questions": 20,
+  "setting": {
+    "question_type": "gain_blind",
+    "min_frequency": 125,
+    "max_frequency": 1000
+  }
+}
+```
+
+Frequency bounds must be values from the frequency options endpoint, and gain bounds for `simple_blind` must be values from the gain options endpoint. Bounds must be ordered low to high, and each range must include at least one usable option. Ranges are inclusive. The gain options endpoint lists positive values; `simple_blind` also allows their negative counterparts as targets. For `gain_blind`, the backend chooses from all positive and negative gain options plus zero, so the client does not send gain bounds.
+
+Frontend code should also use `question_type` as a discriminator when rendering questions and creating answers. `simple_blind` answers require `user_frequency` and `user_gain`; `gain_blind` answers require only `user_gain`. See the `/docs` schemas for the complete question response and answer payloads.
+
+Before presenting selectors, fetch `GET /api/v1/training/infos/frequency/groups` and `GET /api/v1/training/infos/gain/options`. The frequency endpoint returns groups of allowed frequency values; the gain endpoint returns the positive gain values used to choose `simple_blind` bounds.
 
 ### Planned and incomplete features
 

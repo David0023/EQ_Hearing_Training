@@ -8,11 +8,28 @@ class SimpleBlindAnswer(BaseModel):
     user_gain: float
 
 class SimpleBlindCreate(BaseModel):
-    question_type: Literal["simple_blind"]
-    min_frequency: float
-    max_frequency: float
-    min_gain: float
-    max_gain: float
+    model_config = ConfigDict(
+        json_schema_extra={
+            "description": "Identify both the frequency and gain. Bounds are inclusive and must contain available options.",
+            "examples": [
+                {
+                    "question_type": "simple_blind",
+                    "min_frequency": 125,
+                    "max_frequency": 1000,
+                    "min_gain": 3,
+                    "max_gain": 6,
+                }
+            ],
+        }
+    )
+
+    question_type: Literal["simple_blind"] = Field(
+        description="Selects the simple blind setting format."
+    )
+    min_frequency: float = Field(description="Lowest allowed frequency (inclusive).")
+    max_frequency: float = Field(description="Highest allowed frequency (inclusive).")
+    min_gain: float = Field(description="Lowest allowed positive gain bound (inclusive).")
+    max_gain: float = Field(description="Highest allowed positive gain bound (inclusive).")
 
 class SimpleBlindQuestionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
