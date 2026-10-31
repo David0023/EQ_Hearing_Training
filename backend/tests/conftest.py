@@ -35,7 +35,6 @@ if not test_url.database or "test" not in test_url.database.lower():
 # This is required as main.app will use 'DATABASE_URL' when imported.
 # Hence, we have to set its keys before import
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-os.environ["SECRET_KEY"] = "test-secret-key"
 
 from main import app
 from db import database
@@ -95,7 +94,7 @@ async def client(use_test_database):
         transport = ASGITransport(app=app)
         async with AsyncClient(
             transport=transport,
-            base_url='http://test'
+            base_url='https://test'
         ) as test_client:
             yield test_client
 
@@ -123,7 +122,7 @@ async def register_info(client, monkeypatch):
     return {"email": email, "username": username, "password": password}
 
 @pytest.fixture
-async def headers(client, register_info):
+async def authenticated_client(client, register_info):
     response = await client.post(
         "/auth/login",
         data={
@@ -133,5 +132,10 @@ async def headers(client, register_info):
     )
     assert response.status_code == 200, response.text
 
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    client.headers["Authorization"] = f"Bearer {response.json()['access_token']}"
+
+    try:
+        yield client
+    finally:
+        client.headers.pop("Authorization", None)
+        client.cookies.delete("refresh_token")

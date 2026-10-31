@@ -101,3 +101,52 @@ async def test_refresh_with_invalid_token(client, register_info):
     )
 
     assert response.status_code == 401
+
+async def test_refresh_fails_after_user_deletion(authenticated_client, register_info):
+    refresh_token = authenticated_client.cookies.get("refresh_token")
+
+    # Delete user must succeed.
+    response = await authenticated_client.request(
+        "DELETE",
+        '/api/v1/users/me',
+        json={'password': register_info['password']}
+    )
+    assert response.status_code == 204
+
+    # Refresh must fail after user deletion
+    response = await authenticated_client.post(
+        "/auth/refresh", 
+        headers={"Cookie": f"refresh_token={refresh_token}"},
+    )
+    assert response.status_code == 401
+
+async def test_refresh_fails_after_user_logout(authenticated_client):
+    refresh_token = authenticated_client.cookies.get("refresh_token")
+
+    response = await authenticated_client.post(
+        "/auth/logout",
+        headers={"Cookie": f"refresh_token={refresh_token}"},
+    )
+    assert response.status_code == 204
+
+    # Refresh must fail after user logout
+    response = await authenticated_client.post(
+        "/auth/refresh", 
+        headers={"Cookie": f"refresh_token={refresh_token}"},
+    )
+    assert response.status_code == 401
+
+
+async def test_refresh_race_conditions(authenticated_client):
+    # Refresh race condition: Only one refresh should succeed, as it rotates token after.
+    responses = await asyncio.gather(*[
+        authenticated_client.post('/auth/refresh')
+        for i in range(10)
+    ])
+
+    status_codes = {response.status_code for response in responses}
+    status_counts = {
+        code: sum(response.status_code == code for response in responses)
+        for code in status_codes
+    }
+    assert status_counts == {200: 1, 401: 9}, [r.text for r in responses]
