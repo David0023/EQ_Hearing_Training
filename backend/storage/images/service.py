@@ -3,8 +3,12 @@ from pathlib import Path
 from typing import Protocol
 
 from storage.images.validate import (
-    validate_image, InvalidImageError, MAX_IMG_SIZE, ImageMetadata
+    validate_image,
+    MAX_IMG_SIZE,
+    ImageMetadata,
 )
+
+from storage.exceptions import SizeLimitException
 
 CHUNK_SIZE: int = 64 * 1024
 
@@ -27,14 +31,10 @@ async def upload_image(upload_dir: Path, stream: AsyncReadable) -> ImageMetadata
                 size += len(chunk)
 
                 if size > MAX_IMG_SIZE:
-                    raise InvalidImageError("Image size larger than limit")
+                    raise SizeLimitException("Image size larger than limit")
 
                 out.write(chunk)
-
-        try:
-            metadata = validate_image(temp_path, size)
-        except InvalidImageError:
-            raise
+        metadata = validate_image(temp_path, size)
 
         image_id = uuid4().hex
         final_path = (

@@ -11,6 +11,7 @@ from user.schema import (
 )
 
 from storage.images import service as img_service
+from storage import exceptions as storage_exceptions
 from core.config import settings
 
 
@@ -64,8 +65,12 @@ async def update_profile(
         if result.obsolete_image_key is not None:
             background_tasks.add_task(img_service.delete_image, settings.LOCAL_UPLOAD_DIR, result.obsolete_image_key)
         return UserProfileImageUploadResponse(profile_image_key=result.profile_image_key)
-    except service.ProfileImageInvalidError as e:
+    except storage_exceptions.InvalidFileException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except storage_exceptions.UnsupportedFormatException as e:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(e))
+    except storage_exceptions.SizeLimitException as e:
+        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(e))
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not upload image"

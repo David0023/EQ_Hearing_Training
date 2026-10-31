@@ -3,6 +3,7 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from PIL import Image, UnidentifiedImageError
+from storage import exceptions
 
 MAX_IMG_SIZE: int = 5 * 1024 * 1024
 MAX_PIXELS: int = 20_000_000
@@ -21,15 +22,12 @@ class ImageMetadata:
     height: int
     size_bytes: int
 
-class InvalidImageError(Exception):
-    """Uploaded file is not an acceptable image."""
-
 def validate_image(path: Path, size: int) -> ImageMetadata:
     if size == 0:
-        raise InvalidImageError('Empty file')
+        raise exceptions.InvalidFileException('Empty file')
 
     if size > MAX_IMG_SIZE:
-        raise InvalidImageError('Image size larger than limit')
+        raise exceptions.SizeLimitException('Image size larger than limit')
 
     try:
         with warnings.catch_warnings():
@@ -40,14 +38,14 @@ def validate_image(path: Path, size: int) -> ImageMetadata:
                 image_format = image.format
 
                 if image_format not in ALLOWED_IMG_FORMATS:
-                    raise InvalidImageError(
+                    raise exceptions.UnsupportedFormatException(
                         "Unsupported image format"
                     )
 
                 width, height = image.size
 
                 if width * height > MAX_PIXELS:
-                    raise InvalidImageError(
+                    raise exceptions.SizeLimitException(
                         "Image dimensions exceed limit"
                     )
 
@@ -55,8 +53,6 @@ def validate_image(path: Path, size: int) -> ImageMetadata:
 
                 with Image.open(path) as image:
                     image.load()
-    except InvalidImageError:
-        raise
     except (
         UnidentifiedImageError,
         Image.DecompressionBombError,
@@ -64,7 +60,7 @@ def validate_image(path: Path, size: int) -> ImageMetadata:
         OSError,
         ValueError,
     ) as exc:
-        raise InvalidImageError('Invalid/Corrupted Image') from exc
+        raise exceptions.InvalidFileException('Invalid/Corrupted Image') from exc
 
     return ImageMetadata(
         id="",

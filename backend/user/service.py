@@ -13,9 +13,6 @@ logger = logging.getLogger(__name__)
 class UserUnauthenticated(Exception):
     pass
 
-class ProfileImageInvalidError(Exception):
-    """When Profile image is invalid image"""
-
 @dataclass
 class ProfileImageUpdateResult:
     profile_image_key: str
@@ -44,8 +41,6 @@ async def update_profile_image(db: AsyncSession, user: User, file: img_service.A
         )
         await db.commit()
         return ProfileImageUpdateResult(profile_image_key=image_key, obsolete_image_key=prev_profile)
-    except img_service.InvalidImageError as e:
-        raise ProfileImageInvalidError(str(e))
     except Exception:
         await db.rollback()
         if image is not None:
