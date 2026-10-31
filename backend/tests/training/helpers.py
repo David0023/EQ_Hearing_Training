@@ -1,3 +1,7 @@
+from httpx import AsyncClient, Resposne
+from collections.abc import AsyncGenerator
+from pathlib import Path
+
 BASE = '/api/v1/training'
 SETTINGS = {
     'num_questions': 2,
@@ -11,9 +15,10 @@ SETTINGS = {
 }
 
 
-async def create_session(client, headers, settings=None):
-    response = await client.post(
-        f'{BASE}/sessions', headers=headers, json=settings or SETTINGS,
+async def create_session(
+    client: AsyncGenerator[AsyncClient, None],
+    settings: dict | None = SETTINGS
+) -> Resposne:
+    return await client.post(
+        f'{BASE}/sessions', json=settings,
     )
-    assert response.status_code == 201, response.text
-    return response.json()['id']

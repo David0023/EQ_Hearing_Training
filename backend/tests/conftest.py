@@ -2,6 +2,7 @@ import os
 from uuid import uuid4
 import pytest
 from httpx import ASGITransport, AsyncClient
+from collections.abc import AsyncGenerator
 
 
 from alembic import command
@@ -10,7 +11,7 @@ from asgi_lifespan import LifespanManager
 
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 
 
 # Whenever pytest.mark.anyio is used, it tells pytest to use this plugin
@@ -40,7 +41,7 @@ from main import app
 from db import database
 
 @pytest.fixture
-async def use_test_database(monkeypatch):
+async def use_test_database(monkeypatch) -> AsyncGenerator[None, None]:
     admin_engine = None
     test_engine = None
     schema_created = False
@@ -89,7 +90,7 @@ async def use_test_database(monkeypatch):
             await admin_engine.dispose()
 
 @pytest.fixture
-async def client(use_test_database):
+async def client(use_test_database) -> AsyncGenerator[AsyncClient, None]:
     async with LifespanManager(app):
         transport = ASGITransport(app=app)
         async with AsyncClient(
@@ -99,13 +100,13 @@ async def client(use_test_database):
             yield test_client
 
 @pytest.fixture
-async def db_session(client):
+async def db_session(client) -> AsyncGenerator[AsyncSession, None]:
     from db.database import SessionLocal
     async with SessionLocal() as db:
         yield db
 
 @pytest.fixture
-async def register_info(client, monkeypatch):
+async def register_info(client, monkeypatch) -> dict[str, str]:
     email = f"tester-{uuid4().hex}@example.com"
     username = f"tester-{uuid4().hex[:8]}"
     password = f"tester-{uuid4().hex[:8]}"
@@ -122,7 +123,7 @@ async def register_info(client, monkeypatch):
     return {"email": email, "username": username, "password": password}
 
 @pytest.fixture
-async def authenticated_client(client, register_info):
+async def authenticated_client(client, register_info) -> AsyncGenerator[AsyncClient, None]:
     response = await client.post(
         "/auth/login",
         data={
