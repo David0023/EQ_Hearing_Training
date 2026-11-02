@@ -19,14 +19,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.FRONTEND_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 settings.LOCAL_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app.mount(
@@ -41,6 +33,15 @@ def read_root():
 
 app.include_router(auth_router)
 app.include_router(v1_router)
+
+# Wrap the complete app so CORS headers are added to unhandled 500 responses too.
+app = CORSMiddleware(
+    app,
+    allow_origins=settings.FRONTEND_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 if __name__ == "__main__":
