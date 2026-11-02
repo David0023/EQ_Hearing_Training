@@ -53,3 +53,13 @@ async def update_profile_image(db: AsyncSession, user: User, file: img_service.A
                     image_key,
                 )
         raise 
+
+async def delete_profile_image(db: AsyncSession, user: User) -> str | None:
+    image_key = user.profile_img_key
+    try:
+        await repository.update(db, user, flush=True, profile_img_key=None)
+        await db.commit()
+        return image_key
+    except Exception:
+        await db.rollback()
+        raise

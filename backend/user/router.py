@@ -77,3 +77,16 @@ async def update_profile(
         )
     finally:
         await file.close()
+
+@router.delete('/profile/image', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_profile_image(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        image_key = await service.delete_profile_image(db, current_user)
+        if image_key is not None:
+            background_tasks.add_task(img_service.delete_image, settings.LOCAL_UPLOAD_DIR, image_key)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not delete profile image")
