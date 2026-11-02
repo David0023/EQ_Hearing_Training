@@ -8,6 +8,9 @@ from training.question.schema import (
     GetAllTrainingQuestions, AnswerQuestionResponse
 )
 from training.session.model import TrainingSession
+from training.question import repository
+from training.question.model import TrainingQuestion
+from training.question.schema import QuestionAnswerOptions
 
 router = APIRouter(prefix="/sessions", tags=["questions"])
 
@@ -56,3 +59,27 @@ async def answer_question(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
     except service.QuestionNotFoundException:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="The question could not be found.")
+
+
+@router.get(
+    "/{session_id}/questions/{question_id}/options",
+    response_model=QuestionAnswerOptions,
+)
+async def get_question_answer_options(
+    question_id: int,
+    db: AsyncSession = Depends(get_db),
+    session: TrainingSession = Depends(get_locked_session),
+):
+    question = await repository.get_one(
+        db, None,
+        TrainingQuestion.training_session_id == session.id,
+        TrainingQuestion.id == question_id,
+    )
+    if question is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="The question could not be found.")
+
+    try:
+        options = service.get_question_answer_options(session, question)
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Question settings could not be found.")
+    return QuestionAnswerOptions(question_type=question.question_type, **options)

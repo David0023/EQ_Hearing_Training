@@ -26,6 +26,16 @@ class QuestionCreationException(Exception):
     pass
 
 
+def get_question_answer_options(session: TrainingSession, question: TrainingQuestion) -> dict[str, list[float]]:
+    plan = session.config.get("question_plan", [])
+    consumed = 0
+    for block in plan:
+        consumed += int(block["count"])
+        if question.sequence <= consumed:
+            return get_strategy(question.question_type).get_answer_options(block["settings"])
+    raise ValueError("Question settings could not be found.")
+
+
 def _get_next_plan_block(session: TrainingSession, question_count: int) -> PlanItem:
     plan = session.config.get("question_plan", [])
     if not isinstance(plan, list):

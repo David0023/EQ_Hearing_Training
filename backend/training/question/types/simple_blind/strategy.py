@@ -10,6 +10,8 @@ from training.question.types.simple_blind.rule import SimpleBlindRule
 from training.question.types.simple_blind.schema import SimpleBlindAnswer
 from training.domain.info import (
     STANDARD_GAIN_OPTIONS,
+    get_frequency_range,
+    get_gain_range,
     validate_frequency,
     validate_gain,
 )
@@ -27,6 +29,12 @@ class SimpleBlindPlanItem(PlanItem):
 
 class SimpleBlindStrategy(QuestionStrategy):
     question_type = QuestionType.SIMPLE_BLIND
+
+    def get_answer_options(self, settings: SimpleBlindSettings) -> dict[str, list[float]]:
+        return {
+            "frequencies": get_frequency_range(settings["min_frequency"], settings["max_frequency"]),
+            "gains": get_gain_range(settings["min_gain"], settings["max_gain"]),
+        }
 
     def build_plan_item(
         self,

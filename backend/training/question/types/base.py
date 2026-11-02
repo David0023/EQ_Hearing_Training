@@ -35,6 +35,8 @@ class QuestionStrategy(Protocol):
 
     def generate_question(self, settings: Any) -> Any: ...
 
+    def get_answer_options(self, settings: Any) -> dict[str, list[float]]: ...
+
     async def record_answer(
         self,
         db: AsyncSession,

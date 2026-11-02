@@ -9,6 +9,7 @@ from training.question.types.gain_blind.model import GainBlindQuestion
 from training.question.types.gain_blind.rule import GainBlindRule
 from training.question.types.gain_blind.schema import GainBlindAnswer
 from training.domain.info import (
+    get_all_gain,
     validate_frequency,
 )
 
@@ -22,6 +23,9 @@ class GainBlindPlanItem(PlanItem):
 
 class GainBlindStrategy(QuestionStrategy):
     question_type = QuestionType.GAIN_BLIND
+
+    def get_answer_options(self, settings: GainBlindSettings) -> dict[str, list[float]]:
+        return {"gains": get_all_gain(include_negative=True, include_zero=True)}
 
     def build_plan_item(
         self,

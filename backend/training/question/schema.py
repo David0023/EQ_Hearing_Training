@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from training.enums import QuestionType
 from training.question.types.schema import AnswerQuestionRequest, QuestionResponse
@@ -17,3 +17,9 @@ class GetAllTrainingQuestions(BaseModel):
 class AnswerQuestionResponse(BaseModel):
     session_complete: bool
     question: ViewTrainingQuestion
+
+
+class QuestionAnswerOptions(BaseModel):
+    question_type: QuestionType
+    frequencies: list[float] = Field(default_factory=list)
+    gains: list[float]
