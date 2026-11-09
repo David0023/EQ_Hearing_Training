@@ -198,8 +198,10 @@ To run tests locally, install the development dependencies from `backend/` and s
 cd backend
 uv sync --locked --group dev
 TEST_DATABASE_URL='postgresql+asyncpg://USER:PASSWORD@localhost:5432/eq_hearing_test' \
-  uv run --locked --group dev python -m pytest -q
+  uv run --locked --group dev python -m pytest -q --cov --cov-report=term-missing
 ```
+
+Coverage is measured across backend application packages (excluding Alembic migrations) and must reach 80%.
 
 Tests use isolated PostgreSQL schemas and cover account/authentication flows, session and question workflows, ownership checks, deletion behavior, and transaction behavior. The Docker-based pytest suite is currently passing.
 

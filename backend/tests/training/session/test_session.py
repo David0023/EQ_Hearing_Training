@@ -24,3 +24,7 @@ async def test_session_creation_success(authenticated_client: AsyncGenerator[Asy
     )
     response = await create_session(authenticated_client, setting)
     assert response.status_code == 201
+
+
+# Test session creation with invalid frequency or gain settings
+# Test session 

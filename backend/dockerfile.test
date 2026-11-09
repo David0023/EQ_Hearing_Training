@@ -11,5 +11,6 @@ COPY backend/ ./backend/
 COPY pytest.ini ./pytest.ini
 
 ENV PYTHONPATH=/app/backend
+ENV PYTEST_ADDOPTS="--cov --cov-report=term-missing"
 
 CMD ["uv", "run", "--project", "backend", "--locked", "--group", "dev", "python", "-m", "pytest", "-q"]

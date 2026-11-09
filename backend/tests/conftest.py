@@ -21,27 +21,26 @@ def anyio_backend():
 
 # Check Test database url settings
 TEST_DATABASE_URL = os.environ.get('TEST_DATABASE_URL')
-if not TEST_DATABASE_URL:
-    raise pytest.UsageError(
-        'TEST_DATABASE_URL is required. Point it at a dedicated PostgreSQL test database.'
-    )
-
-test_url = make_url(TEST_DATABASE_URL)
-if test_url.drivername != 'postgresql+asyncpg':
-    raise pytest.UsageError("TEST_DATABASE_URL must use PostgreSQL with asyncpg")
-if not test_url.database or "test" not in test_url.database.lower():
-    raise pytest.UsageError("TEST_DATABASE_URL must name a dedicated test database")
-
-
-# This is required as main.app will use 'DATABASE_URL' when imported.
-# Hence, we have to set its keys before import
-os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-
-from main import app
-from db import database
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-backend-tests")
 
 @pytest.fixture
 async def use_test_database(monkeypatch) -> AsyncGenerator[None, None]:
+    test_database_url = os.environ.get('TEST_DATABASE_URL')
+    if not test_database_url:
+        raise pytest.UsageError(
+            'TEST_DATABASE_URL is required. Point it at a dedicated PostgreSQL test database.'
+        )
+    test_url = make_url(test_database_url)
+    if test_url.drivername != 'postgresql+asyncpg':
+        raise pytest.UsageError("TEST_DATABASE_URL must use PostgreSQL with asyncpg")
+    if not test_url.database or "test" not in test_url.database.lower():
+        raise pytest.UsageError("TEST_DATABASE_URL must name a dedicated test database")
+
+    # Set before importing main, which creates the application engine.
+    os.environ["DATABASE_URL"] = test_database_url
+    from db import database
+    from main import app
+
     admin_engine = None
     test_engine = None
     schema_created = False
@@ -49,11 +48,11 @@ async def use_test_database(monkeypatch) -> AsyncGenerator[None, None]:
         schema = f'pytest_{uuid4().hex}'
 
         # Admin engine to generate schema
-        admin_engine = create_async_engine(TEST_DATABASE_URL)
+        admin_engine = create_async_engine(test_database_url)
 
         # Test engine for sessions and alembic
         test_engine = create_async_engine(
-        TEST_DATABASE_URL,
+        test_database_url,
         connect_args={'server_settings': {'search_path': schema}})
         monkeypatch.setattr(database, 'engine', test_engine)
 
@@ -91,6 +90,7 @@ async def use_test_database(monkeypatch) -> AsyncGenerator[None, None]:
 
 @pytest.fixture
 async def client(use_test_database) -> AsyncGenerator[AsyncClient, None]:
+    from main import app
     async with LifespanManager(app):
         transport = ASGITransport(app=app)
         async with AsyncClient(

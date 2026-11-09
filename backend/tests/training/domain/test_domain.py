@@ -5,7 +5,7 @@ from tests.training.helpers import BASE
 
 pytestmark = pytest.mark.anyio
 
-async def test_get_frequency_list(client: AsyncGenerator[AsyncClient, None]):
+async def test_get_frequency_groups(client: AsyncGenerator[AsyncClient, None]):
     from training.domain.info import FREQUENCY_GROUPS
     response = await client.get(f'{BASE}/infos/frequency/groups')
 
@@ -24,7 +24,7 @@ async def test_get_frequency_list(client: AsyncGenerator[AsyncClient, None]):
         available_groups.pop(group, None)
     assert not available_groups
 
-async def test_get_frequency_list(client: AsyncGenerator[AsyncClient, None]):
+async def test_get_gain_options(client: AsyncGenerator[AsyncClient, None]):
     from training.domain.info import STANDARD_GAIN_OPTIONS
     response = await client.get(f'{BASE}/infos/gain/options')
 
